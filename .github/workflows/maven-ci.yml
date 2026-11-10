@@ -34,7 +34,7 @@ jobs:
         run: mvn --batch-mode --no-transfer-progress compile
 
       - name: Run JUnit 5 Regression Test Suite
-        run: mvn --batch-mode --no-transfer-progress test
+        run: xvfb-run --auto-servernum --server-args="-screen 0 1024x768x24" mvn --batch-mode --no-transfer-progress test
 
       - name: Package Standalone Fat JAR
         run: mvn --batch-mode --no-transfer-progress package -DskipTests
