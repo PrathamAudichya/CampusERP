@@ -1,0 +1,40 @@
+name: Java CI with Maven
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build & Test (Java 17)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17 (Temurin)
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: 'maven'
+
+      - name: Verify Maven and Java Environment
+        run: |
+          java -version
+          mvn -version
+
+      - name: Compile Source Code
+        run: mvn --batch-mode --no-transfer-progress compile
+
+      - name: Run JUnit 5 Regression Test Suite
+        run: mvn --batch-mode --no-transfer-progress test
+
+      - name: Package Standalone Fat JAR
+        run: mvn --batch-mode --no-transfer-progress package -DskipTests
