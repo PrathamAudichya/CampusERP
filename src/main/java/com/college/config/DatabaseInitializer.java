@@ -867,7 +867,7 @@ public class DatabaseInitializer {
             // 7. student_progression_history
             stmt.execute("CREATE TABLE IF NOT EXISTS student_progression_history (" +
                     "id INTEGER PRIMARY KEY AUTOINCREMENT, " +
-                    "student_id INTEGER NOT NULL REFERENCES students(id) ON DELETE CASCADE, " +
+                    "student_id INTEGER NOT NULL REFERENCES students(id) ON DELETE RESTRICT, " +
                     "previous_semester INTEGER NOT NULL, " +
                     "new_semester INTEGER NOT NULL, " +
                     "academic_year TEXT NOT NULL, " +
@@ -964,54 +964,54 @@ public class DatabaseInitializer {
 
             // V11: progression_history_fk_rebuild
             // Safely rebuild student_progression_history if legacy database retains ON DELETE CASCADE
-            boolean needsRebuild = false;
-            try (java.sql.ResultSet rs = stmt.executeQuery("PRAGMA foreign_key_list(student_progression_history)")) {
-                while (rs.next()) {
-                    String refTable = rs.getString("table");
-                    String onDelete = rs.getString("on_delete");
-                    if ("students".equalsIgnoreCase(refTable) && "CASCADE".equalsIgnoreCase(onDelete)) {
-                        needsRebuild = true;
-                        break;
+            if (hasUsers && hasProgHist) {
+                boolean needsRebuild = false;
+                try (java.sql.ResultSet rs = stmt.executeQuery("PRAGMA foreign_key_list(student_progression_history)")) {
+                    while (rs.next()) {
+                        String refTable = rs.getString("table");
+                        String onDelete = rs.getString("on_delete");
+                        if ("students".equalsIgnoreCase(refTable) && "CASCADE".equalsIgnoreCase(onDelete)) {
+                            needsRebuild = true;
+                            break;
+                        }
                     }
                 }
-            }
-            if (needsRebuild) {
-                stmt.execute("DROP TRIGGER IF EXISTS trg_prevent_progression_history_del");
-                stmt.execute("DROP TRIGGER IF EXISTS trg_prevent_progression_history_upd");
+                if (needsRebuild) {
+                    stmt.execute("DROP TRIGGER IF EXISTS trg_prevent_progression_history_del");
+                    stmt.execute("DROP TRIGGER IF EXISTS trg_prevent_progression_history_upd");
 
-                stmt.execute("CREATE TABLE student_progression_history_new (" +
-                        "id INTEGER PRIMARY KEY AUTOINCREMENT, " +
-                        "student_id INTEGER NOT NULL REFERENCES students(id) ON DELETE RESTRICT, " +
-                        "previous_semester INTEGER NOT NULL, " +
-                        "new_semester INTEGER NOT NULL, " +
-                        "academic_year TEXT NOT NULL, " +
-                        "action TEXT NOT NULL CHECK(action IN ('PROMOTED', 'HELD', 'REPEATED', 'LATERAL_ENTRY')), " +
-                        "performed_by INTEGER NOT NULL REFERENCES users(id), " +
-                        "reason TEXT NOT NULL, " +
-                        "created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP" +
-                        ")");
+                    stmt.execute("CREATE TABLE student_progression_history_new (" +
+                            "id INTEGER PRIMARY KEY AUTOINCREMENT, " +
+                            "student_id INTEGER NOT NULL REFERENCES students(id) ON DELETE RESTRICT, " +
+                            "previous_semester INTEGER NOT NULL, " +
+                            "new_semester INTEGER NOT NULL, " +
+                            "academic_year TEXT NOT NULL, " +
+                            "action TEXT NOT NULL CHECK(action IN ('PROMOTED', 'HELD', 'REPEATED', 'LATERAL_ENTRY')), " +
+                            "performed_by INTEGER NOT NULL REFERENCES users(id), " +
+                            "reason TEXT NOT NULL, " +
+                            "created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP" +
+                            ")");
 
-                stmt.execute("INSERT INTO student_progression_history_new (id, student_id, previous_semester, new_semester, academic_year, action, performed_by, reason, created_at) " +
-                        "SELECT id, student_id, previous_semester, new_semester, academic_year, action, performed_by, reason, created_at FROM student_progression_history");
+                    stmt.execute("INSERT INTO student_progression_history_new (id, student_id, previous_semester, new_semester, academic_year, action, performed_by, reason, created_at) " +
+                            "SELECT id, student_id, previous_semester, new_semester, academic_year, action, performed_by, reason, created_at FROM student_progression_history");
 
-                stmt.execute("DROP TABLE student_progression_history");
-                stmt.execute("ALTER TABLE student_progression_history_new RENAME TO student_progression_history");
-                stmt.execute("CREATE INDEX IF NOT EXISTS idx_prog_hist_stu ON student_progression_history(student_id)");
+                    stmt.execute("DROP TABLE student_progression_history");
+                    stmt.execute("ALTER TABLE student_progression_history_new RENAME TO student_progression_history");
+                    stmt.execute("CREATE INDEX IF NOT EXISTS idx_prog_hist_stu ON student_progression_history(student_id)");
 
-                stmt.execute("CREATE TRIGGER IF NOT EXISTS trg_prevent_progression_history_del " +
-                        "BEFORE DELETE ON student_progression_history " +
-                        "BEGIN " +
-                        "    SELECT RAISE(ABORT, 'Progression history records are immutable and cannot be deleted.'); " +
-                        "END");
+                    stmt.execute("CREATE TRIGGER IF NOT EXISTS trg_prevent_progression_history_del " +
+                            "BEFORE DELETE ON student_progression_history " +
+                            "BEGIN " +
+                            "    SELECT RAISE(ABORT, 'Progression history records are immutable and cannot be deleted.'); " +
+                            "END");
 
-                stmt.execute("CREATE TRIGGER IF NOT EXISTS trg_prevent_progression_history_upd " +
-                        "BEFORE UPDATE ON student_progression_history " +
-                        "BEGIN " +
-                        "    SELECT RAISE(ABORT, 'Progression history records are immutable and cannot be updated.'); " +
-                        "END");
-            }
+                    stmt.execute("CREATE TRIGGER IF NOT EXISTS trg_prevent_progression_history_upd " +
+                            "BEFORE UPDATE ON student_progression_history " +
+                            "BEGIN " +
+                            "    SELECT RAISE(ABORT, 'Progression history records are immutable and cannot be updated.'); " +
+                            "END");
+                }
 
-            if (hasUsers) {
                 stmt.execute("INSERT OR IGNORE INTO schema_migrations (version, description) VALUES " +
                         "('V11__progression_history_fk_rebuild', 'Rebuild student_progression_history to enforce ON DELETE RESTRICT on students foreign key')");
             }
