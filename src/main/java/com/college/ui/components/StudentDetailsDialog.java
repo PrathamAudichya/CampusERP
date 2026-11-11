@@ -17,7 +17,7 @@ import java.awt.datatransfer.StringSelection;
 public class StudentDetailsDialog extends JDialog {
 
     public StudentDetailsDialog(Window owner, Student student, Department department, User linkedUser) {
-        super(owner, "Student Record Details — " + student.getStudentId(), ModalityType.APPLICATION_MODAL);
+        super(owner, "Student Record Details \u2014 " + student.getStudentId(), ModalityType.APPLICATION_MODAL);
         initUI(student, department, linkedUser);
     }
 
@@ -46,7 +46,7 @@ public class StudentDetailsDialog extends JDialog {
         nameLabel.setForeground(CampusTheme.PRIMARY);
 
         String deptStr = (d != null) ? d.getName() + " (" + d.getCode() + ")" : "Department #" + s.getDepartmentId();
-        JLabel subLabel = new JLabel("ID: " + s.getStudentId() + "  •  " + deptStr);
+        JLabel subLabel = new JLabel("ID: " + s.getStudentId() + "  \u2022  " + deptStr);
         subLabel.setFont(CampusTheme.FONT_SMALL);
         subLabel.setForeground(CampusTheme.TEXT_SECONDARY);
         namePanel.add(nameLabel);
@@ -110,7 +110,7 @@ public class StudentDetailsDialog extends JDialog {
             addDetailRow(secGrid, gbc, row++, "Account Username:", u.getUsername());
             addDetailRow(secGrid, gbc, row++, "Account Status:", u.isActive() ? "Active" : "Disabled");
             addDetailRow(secGrid, gbc, row++, "Role:", u.getRole() != null ? u.getRole().name() : "STUDENT");
-            addDetailRow(secGrid, gbc, row++, "Password Policy:", u.isMustChangePassword() ? "Temporary — Must Change on Next Login" : "Standard Active");
+            addDetailRow(secGrid, gbc, row++, "Password Policy:", u.isMustChangePassword() ? "Temporary \u2014 Must Change on Next Login" : "Standard Active");
         } else {
             addDetailRow(secGrid, gbc, row++, "User Account:", "No user account linked to this registration ID");
         }
@@ -157,7 +157,7 @@ public class StudentDetailsDialog extends JDialog {
             }
             sb.append("=================================\n");
             Toolkit.getDefaultToolkit().getSystemClipboard().setContents(new StringSelection(sb.toString()), null);
-            statusLabel.setText("✓ Copied full record to clipboard.");
+            statusLabel.setText("\u2713 Copied full record to clipboard.");
         });
         btnRow.add(copyBtn);
 

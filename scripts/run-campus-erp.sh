@@ -19,10 +19,10 @@ fi
 # 2. Locate Application Executable JAR
 if [ -f "${PROJECT_DIR}/target/CollegeManagementSystem.jar" ]; then
     APP_JAR="${PROJECT_DIR}/target/CollegeManagementSystem.jar"
-elif [ -f "${PROJECT_DIR}/release/CampusERP-v2.0.9-candidate.jar" ]; then
-    APP_JAR="${PROJECT_DIR}/release/CampusERP-v2.0.9-candidate.jar"
 else
-    echo "[ERROR] Could not locate application JAR at target/CollegeManagementSystem.jar or ${PROJECT_DIR}/release/CampusERP-v2.0.9-candidate.jar"
+    echo "[ERROR] Current build artifact not found at: ${PROJECT_DIR}/target/CollegeManagementSystem.jar"
+    echo "Campus ERP will NOT fall back to outdated historical release candidate JARs."
+    echo "Please package the application first using: mvn clean package -DskipTests"
     exit 1
 fi
 

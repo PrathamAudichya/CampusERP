@@ -739,15 +739,16 @@ public class FacultyPanel extends JPanel {
 
         int modelRow = facultyTable.convertRowIndexToModel(viewRow);
         selectedFacultyPk = (Integer) tableModel.getValueAt(modelRow, 0);
-        Faculty cached = facultyCache.get(selectedFacultyPk);
+        final Integer targetFacultyPk = selectedFacultyPk;
+        Faculty cached = facultyCache.get(targetFacultyPk);
         if (cached != null) {
             populateFormFromFaculty(cached);
         } else {
             SwingUtils.executeAsync(
                     this,
-                    () -> facultyService.getFacultyById(currentUser, selectedFacultyPk),
+                    () -> facultyService.getFacultyById(currentUser, targetFacultyPk),
                     f -> {
-                        if (f != null) {
+                        if (f != null && java.util.Objects.equals(selectedFacultyPk, targetFacultyPk)) {
                             facultyCache.put(f.getId(), f);
                             populateFormFromFaculty(f);
                         }
@@ -820,20 +821,21 @@ public class FacultyPanel extends JPanel {
                 },
                 error -> {
                     createButton.setEnabled(true);
-                    SwingUtils.showError(this, "Failed to create faculty: " + error.getMessage());
+                    SwingUtils.showError(this, SwingUtils.getSafeUserErrorMessage(error, "Failed to create faculty"));
                 }
         );
     }
 
     private void changeFacultyUsername() {
         if (selectedFacultyPk == null) return;
-        Faculty cached = facultyCache.get(selectedFacultyPk);
+        final Integer targetFacultyPk = selectedFacultyPk;
+        Faculty cached = facultyCache.get(targetFacultyPk);
         String currentId = cached != null ? cached.getFacultyId() : "";
 
         changeUsernameButton.setEnabled(false);
         SwingUtils.executeAsync(
                 this,
-                () -> facultyService.getLinkedUserForFaculty(currentUser, selectedFacultyPk),
+                () -> facultyService.getLinkedUserForFaculty(currentUser, targetFacultyPk),
                 linkedUser -> {
                     changeUsernameButton.setEnabled(true);
                     String currentUsername = (linkedUser != null) ? linkedUser.getUsername() : currentId;
@@ -849,7 +851,7 @@ public class FacultyPanel extends JPanel {
                     SwingUtils.executeAsync(
                             this,
                             () -> {
-                                facultyService.updateFacultyUsername(currentUser, selectedFacultyPk, newUsername.trim());
+                                facultyService.updateFacultyUsername(currentUser, targetFacultyPk, newUsername.trim());
                                 return null;
                             },
                             unused -> {
@@ -859,13 +861,13 @@ public class FacultyPanel extends JPanel {
                             },
                             error -> {
                                 changeUsernameButton.setEnabled(true);
-                                SwingUtils.showError(this, "Failed to change faculty username: " + error.getMessage());
+                                SwingUtils.showError(this, SwingUtils.getSafeUserErrorMessage(error, "Failed to change faculty username"));
                             }
                     );
                 },
                 error -> {
                     changeUsernameButton.setEnabled(true);
-                    SwingUtils.showError(this, "Failed to load linked faculty user account: " + error.getMessage());
+                    SwingUtils.showError(this, SwingUtils.getSafeUserErrorMessage(error, "Failed to load linked faculty user account"));
                 }
         );
     }
@@ -903,18 +905,19 @@ public class FacultyPanel extends JPanel {
                 },
                 error -> {
                     resetPasswordButton.setEnabled(true);
-                    SwingUtils.showError(this, "Failed to reset password: " + error.getMessage());
+                    SwingUtils.showError(this, SwingUtils.getSafeUserErrorMessage(error, "Failed to reset password"));
                 }
         );
     }
 
     private void updateFaculty() {
         if (selectedFacultyPk == null) return;
+        final Integer targetFacultyPk = selectedFacultyPk;
         Faculty f = buildFacultyFromForm();
         if (f == null) return;
-        f.setId(selectedFacultyPk);
+        f.setId(targetFacultyPk);
 
-        Faculty existing = facultyCache.get(selectedFacultyPk);
+        Faculty existing = facultyCache.get(targetFacultyPk);
         if (existing != null) {
             f.setActive(existing.isActive());
             f.setUserId(existing.getUserId());
@@ -933,15 +936,16 @@ public class FacultyPanel extends JPanel {
                 },
                 error -> {
                     updateButton.setEnabled(true);
-                    SwingUtils.showError(this, "Failed to update faculty: " + error.getMessage());
+                    SwingUtils.showError(this, SwingUtils.getSafeUserErrorMessage(error, "Failed to update faculty"));
                 }
         );
     }
 
     private void deleteFaculty() {
         if (selectedFacultyPk == null) return;
+        final Integer targetFacultyPk = selectedFacultyPk;
         boolean confirm = SwingUtils.showConfirm(this,
-                "Are you sure you want to deactivate faculty member ID " + selectedFacultyPk + "?",
+                "Are you sure you want to deactivate faculty member ID " + targetFacultyPk + "?",
                 "Confirm Deactivation");
         if (!confirm) return;
 
@@ -949,7 +953,7 @@ public class FacultyPanel extends JPanel {
         SwingUtils.executeAsync(
                 this,
                 () -> {
-                    facultyService.deleteFaculty(currentUser, selectedFacultyPk);
+                    facultyService.deleteFaculty(currentUser, targetFacultyPk);
                     return null;
                 },
                 unused -> {
@@ -959,17 +963,18 @@ public class FacultyPanel extends JPanel {
                 },
                 error -> {
                     deleteButton.setEnabled(true);
-                    SwingUtils.showError(this, "Failed to deactivate faculty: " + error.getMessage());
+                    SwingUtils.showError(this, SwingUtils.getSafeUserErrorMessage(error, "Failed to deactivate faculty"));
                 }
         );
     }
 
     private void reactivateFaculty() {
         if (selectedFacultyPk == null) return;
+        final Integer targetFacultyPk = selectedFacultyPk;
         reactivateButton.setEnabled(false);
         SwingUtils.executeAsync(
                 this,
-                () -> facultyService.reactivateFaculty(currentUser, selectedFacultyPk),
+                () -> facultyService.reactivateFaculty(currentUser, targetFacultyPk),
                 reactivated -> {
                     reactivateButton.setEnabled(true);
                     SwingUtils.showInfo(this, "Faculty member reactivated.");
@@ -977,7 +982,7 @@ public class FacultyPanel extends JPanel {
                 },
                 error -> {
                     reactivateButton.setEnabled(true);
-                    SwingUtils.showError(this, "Failed to reactivate faculty: " + error.getMessage());
+                    SwingUtils.showError(this, SwingUtils.getSafeUserErrorMessage(error, "Failed to reactivate faculty"));
                 }
         );
     }

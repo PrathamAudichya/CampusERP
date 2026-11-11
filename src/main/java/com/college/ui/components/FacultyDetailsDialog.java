@@ -21,7 +21,7 @@ public class FacultyDetailsDialog extends JDialog {
     }
 
     public FacultyDetailsDialog(Window owner, Faculty faculty, Department department, User linkedUser) {
-        super(owner, "Faculty Member Details — " + faculty.getFacultyId(), ModalityType.APPLICATION_MODAL);
+        super(owner, "Faculty Member Details \u2014 " + faculty.getFacultyId(), ModalityType.APPLICATION_MODAL);
         initUI(faculty, department, linkedUser);
     }
 
@@ -50,7 +50,7 @@ public class FacultyDetailsDialog extends JDialog {
         nameLabel.setForeground(CampusTheme.PRIMARY);
 
         String deptStr = (d != null) ? d.getName() + " (" + d.getCode() + ")" : "Department #" + f.getDepartmentId();
-        JLabel subLabel = new JLabel("ID: " + f.getFacultyId() + "  •  " + deptStr);
+        JLabel subLabel = new JLabel("ID: " + f.getFacultyId() + "  \u2022  " + deptStr);
         subLabel.setFont(CampusTheme.FONT_SMALL);
         subLabel.setForeground(CampusTheme.TEXT_SECONDARY);
         namePanel.add(nameLabel);
@@ -108,7 +108,7 @@ public class FacultyDetailsDialog extends JDialog {
             addDetailRow(secGrid, gbc, row++, "Account Username:", u.getUsername());
             addDetailRow(secGrid, gbc, row++, "Account Status:", u.isActive() ? "Active" : "Disabled");
             addDetailRow(secGrid, gbc, row++, "Role:", u.getRole() != null ? u.getRole().name() : "FACULTY");
-            addDetailRow(secGrid, gbc, row++, "Password Policy:", u.isMustChangePassword() ? "Temporary — Must Change on Next Login" : "Standard Active");
+            addDetailRow(secGrid, gbc, row++, "Password Policy:", u.isMustChangePassword() ? "Temporary \u2014 Must Change on Next Login" : "Standard Active");
         } else {
             addDetailRow(secGrid, gbc, row++, "User Account:", "No user account linked to this faculty record");
         }
@@ -165,7 +165,7 @@ public class FacultyDetailsDialog extends JDialog {
             }
             sb.append("=================================\n");
             Toolkit.getDefaultToolkit().getSystemClipboard().setContents(new StringSelection(sb.toString()), null);
-            statusLabel.setText("✓ Copied full record to clipboard.");
+            statusLabel.setText("\u2713 Copied full record to clipboard.");
         });
         btnRow.add(copyBtn);
 

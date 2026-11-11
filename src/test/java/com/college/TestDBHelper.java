@@ -25,6 +25,7 @@ public class TestDBHelper {
             "jdbc:sqlite:file:testdb_" + ProcessHandle.current().pid() + "?mode=memory&cache=shared";
 
     private static Connection keepAliveConnection;
+    private static String savedDbProperty;
 
     private TestDBHelper() {
         // Utility class
@@ -36,6 +37,9 @@ public class TestDBHelper {
      * when individual test connections close.
      */
     public static synchronized void initTestDatabase() throws Exception {
+        if (savedDbProperty == null) {
+            savedDbProperty = System.getProperty("college.db.path");
+        }
         System.setProperty("college.db.path", TEST_DB_URL);
         if (keepAliveConnection == null || keepAliveConnection.isClosed()) {
             SQLiteConfig config = new SQLiteConfig();
@@ -181,6 +185,12 @@ public class TestDBHelper {
         if (keepAliveConnection != null && !keepAliveConnection.isClosed()) {
             keepAliveConnection.close();
             keepAliveConnection = null;
+        }
+        if (savedDbProperty != null) {
+            System.setProperty("college.db.path", savedDbProperty);
+            savedDbProperty = null;
+        } else {
+            System.clearProperty("college.db.path");
         }
     }
 }

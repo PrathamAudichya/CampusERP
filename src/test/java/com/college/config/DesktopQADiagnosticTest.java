@@ -76,7 +76,16 @@ public class DesktopQADiagnosticTest {
     @DisplayName("BUG-1: Migrating existing demo database without timetables")
     public void testMigrateExistingDemoDatabase() throws Exception {
         Path demoCopy = TEST_DIR.resolve("demo-copy.db");
-        org.junit.jupiter.api.Assumptions.assumeTrue(Files.exists(demoCopy), "demo-copy.db must exist");
+        if (!Files.exists(demoCopy)) {
+            Files.createDirectories(demoCopy.getParent());
+            try (Connection setupConn = DriverManager.getConnection("jdbc:sqlite:" + demoCopy.toAbsolutePath())) {
+                DatabaseInitializer.initializeSchemaOnly(setupConn);
+                try (Statement stmt = setupConn.createStatement()) {
+                    stmt.execute("DROP TABLE IF EXISTS timetables");
+                    stmt.execute("DELETE FROM schema_migrations WHERE version LIKE '%timetables%'");
+                }
+            }
+        }
 
         String url = "jdbc:sqlite:" + demoCopy.toAbsolutePath();
         try (Connection conn = DriverManager.getConnection(url)) {

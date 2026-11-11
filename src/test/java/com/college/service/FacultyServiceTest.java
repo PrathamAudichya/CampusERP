@@ -281,4 +281,53 @@ public class FacultyServiceTest {
                     facultyService.updateFacultyUsername(admin, 999999, "new.user"));
         }
     }
+
+    @Test
+    @DisplayName("Verify transactional persistence and rollback for faculty username updates")
+    void testUpdateFacultyUsernameTransactionalIntegrity() throws SQLException {
+        try (Connection conn = TestDBHelper.getTestConnection()) {
+            User admin = createAdmin(conn);
+            Department dept = departmentDAO.insert(conn, new Department("MATH", "Mathematics"));
+
+            Faculty f1 = new Faculty();
+            f1.setDepartmentId(dept.getId());
+            f1.setFacultyId("FAC_MATH_01");
+            f1.setFirstName("Carl");
+            f1.setLastName("Gauss");
+            f1.setEmail("cgauss@college.edu");
+            Faculty created1 = facultyService.createFaculty(admin, f1, "pass123");
+
+            Faculty f2 = new Faculty();
+            f2.setDepartmentId(dept.getId());
+            f2.setFacultyId("FAC_MATH_02");
+            f2.setFirstName("Leonhard");
+            f2.setLastName("Euler");
+            f2.setEmail("leuler@college.edu");
+            Faculty created2 = facultyService.createFaculty(admin, f2, "pass123");
+
+            // 1. Successful transactional rename
+            facultyService.updateFacultyUsername(admin, created1.getId(), "carl.gauss.updated");
+
+            User updatedUser1 = userDAO.findById(created1.getUserId());
+            assertNotNull(updatedUser1);
+            assertEquals("carl.gauss.updated", updatedUser1.getUsername(), "Username must be persisted in database");
+
+            // Verify audit log has the event
+            try (Statement stmt = conn.createStatement();
+                 ResultSet rs = stmt.executeQuery("SELECT action, old_value, new_value FROM audit_log WHERE action = 'UPDATE_FACULTY_USERNAME'")) {
+                assertTrue(rs.next(), "Audit log must contain UPDATE_FACULTY_USERNAME record");
+                assertEquals("FAC_MATH_01", rs.getString("old_value"));
+                assertEquals("carl.gauss.updated", rs.getString("new_value"));
+            }
+
+            // 2. Failed rename due to collision with created2 - verify rollback
+            assertThrows(ValidationException.class, () ->
+                    facultyService.updateFacultyUsername(admin, created1.getId(), "FAC_MATH_02"));
+
+            // Verify state remained unchanged after rollback
+            User unchangedUser1 = userDAO.findById(created1.getUserId());
+            assertNotNull(unchangedUser1);
+            assertEquals("carl.gauss.updated", unchangedUser1.getUsername(), "Failed update must leave original username intact");
+        }
+    }
 }

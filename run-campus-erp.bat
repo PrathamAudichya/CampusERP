@@ -31,16 +31,15 @@ if %ERRORLEVEL% neq 0 (
 REM 2. Locate Application Executable JAR
 if exist "%PROJECT_DIR%\target\CollegeManagementSystem.jar" (
     set "APP_JAR=%PROJECT_DIR%\target\CollegeManagementSystem.jar"
-) else if exist "%PROJECT_DIR%\release\CampusERP-v2.0.9-candidate.jar" (
-    set "APP_JAR=%PROJECT_DIR%\release\CampusERP-v2.0.9-candidate.jar"
 ) else (
     echo.
     echo ============================================================================
-    echo [ERROR] Could not locate the Campus ERP application JAR.
+    echo [ERROR] Current build artifact not found!
     echo Expected: %PROJECT_DIR%\target\CollegeManagementSystem.jar
     echo.
-    echo Please ensure the project has been built with:
-    echo   mvn clean package
+    echo Campus ERP will NOT fall back to outdated release candidate JARs.
+    echo Please compile and package the application first using:
+    echo   mvn clean package -DskipTests
     echo ============================================================================
     echo.
     pause

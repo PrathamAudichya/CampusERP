@@ -64,9 +64,11 @@ public class FinalDesktopAcceptanceTest {
     private static Student testStudent;
     private static Faculty testFaculty;
     private static Department testDept;
+    private static String originalDbProp;
 
     @BeforeAll
     public static void initScratchEnvironment() throws IOException {
+        originalDbProp = System.getProperty("college.db.path");
         Files.createDirectories(SCRATCH_DIR);
         // Guarantee database starts in a non-existent state
         Files.deleteIfExists(ACCEPTANCE_DB);
@@ -75,6 +77,15 @@ public class FinalDesktopAcceptanceTest {
 
         // Direct DBConnection to our isolated scratch database
         System.setProperty("college.db.path", ACCEPTANCE_DB.toAbsolutePath().toString());
+    }
+
+    @AfterAll
+    public static void restoreEnvironment() {
+        if (originalDbProp != null) {
+            System.setProperty("college.db.path", originalDbProp);
+        } else {
+            System.clearProperty("college.db.path");
+        }
     }
 
     @Test

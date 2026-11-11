@@ -16,6 +16,7 @@ import com.college.ui.panel.AcademicProgramPanel;
 import com.college.ui.panel.CohortProgressionPanel;
 import com.college.ui.panel.DepartmentPanel;
 import com.college.ui.panel.ProgrammeCurriculumPanel;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -33,17 +34,20 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * Headless Swing Event Dispatch Thread (EDT) component verification test for Milestone 4.
- * Validates EDT component instantiation, layouts, buttons, tables, filters, and dialogs
- * for Academic Structure and Programme Management capabilities.
+ * Headless Swing Event Dispatch Thread (EDT) component smoke/verification test for Milestone 4.
+ * Note: These automated tests verify Swing component instantiation, layouts, and data bindings
+ * on the EDT. They do not substitute for actual end-user interactive GUI acceptance testing
+ * performed on the desktop using run-campus-erp.bat.
  */
 public class Milestone4GuiComponentVerificationTest {
 
     private static final Path DEMO_DB_PATH = Paths.get("target", "test-dbs-m4", "gui-verification-m4.db");
     private static User adminUser;
+    private static String savedDbProperty;
 
     @BeforeAll
     public static void setUpDemoDatabase() throws Exception {
+        savedDbProperty = System.getProperty("college.db.path");
         Files.createDirectories(DEMO_DB_PATH.getParent());
         Files.deleteIfExists(DEMO_DB_PATH);
 
@@ -289,6 +293,15 @@ public class Milestone4GuiComponentVerificationTest {
             if (comp instanceof Container) {
                 findAllComponentsOfTypeRecursive((Container) comp, clazz, result);
             }
+        }
+    }
+
+    @AfterAll
+    public static void tearDown() {
+        if (savedDbProperty != null) {
+            System.setProperty("college.db.path", savedDbProperty);
+        } else {
+            System.clearProperty("college.db.path");
         }
     }
 }

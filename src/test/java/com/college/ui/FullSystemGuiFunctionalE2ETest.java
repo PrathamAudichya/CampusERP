@@ -57,9 +57,11 @@ public class FullSystemGuiFunctionalE2ETest {
     private static FeePaymentService feePaymentService;
     private static ReportService reportService;
     private static AdminDashboardService dashboardService;
+    private static String savedDbProperty;
 
     @BeforeAll
     public static void setUp() throws Exception {
+        savedDbProperty = System.getProperty("college.db.path");
         Files.createDirectories(SCRATCH_DB.getParent());
         Files.deleteIfExists(SCRATCH_DB);
 
@@ -98,7 +100,11 @@ public class FullSystemGuiFunctionalE2ETest {
 
     @AfterAll
     public static void tearDown() {
-        System.clearProperty("college.db.path");
+        if (savedDbProperty != null) {
+            System.setProperty("college.db.path", savedDbProperty);
+        } else {
+            System.clearProperty("college.db.path");
+        }
     }
 
     @Test

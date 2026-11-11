@@ -30,7 +30,7 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class DBConnection {
 
-    private static final String DEFAULT_DB_PATH = "data/college-demo.db";
+    public static final String DEFAULT_DB_PATH = "data/college-demo.db";
 
     /**
      * Thread-safe cache of verified parent directory paths.

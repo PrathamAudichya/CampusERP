@@ -327,17 +327,37 @@ public class AuthService {
             return true; // No change needed
         }
 
-        User existing = userDAO.findByUsername(trimmed);
-        if (existing != null && existing.getId() != targetUserId) {
-            throw new ValidationException("Username '" + trimmed + "' is already assigned to another account.");
-        }
+        try (Connection conn = DBConnection.getConnection()) {
+            conn.setAutoCommit(false);
+            try {
+                User existing = userDAO.findByUsername(conn, trimmed);
+                if (existing != null && existing.getId() != targetUserId) {
+                    throw new ValidationException("Username '" + trimmed + "' is already assigned to another account.");
+                }
 
-        boolean updated = userDAO.updateUsername(targetUserId, trimmed);
-        if (updated) {
-            auditService.log(currentUser.getId(), "UPDATE_USERNAME", "USER", targetUserId,
-                    target.getUsername(), trimmed);
+                boolean updated = userDAO.updateUsername(conn, targetUserId, trimmed);
+                if (updated) {
+                    auditService.log(conn, currentUser.getId(), "UPDATE_USERNAME", "USER", targetUserId,
+                            target.getUsername(), trimmed);
+                }
+                conn.commit();
+                return updated;
+            } catch (Exception ex) {
+                try {
+                    conn.rollback();
+                } catch (SQLException rollbackEx) {
+                    ex.addSuppressed(rollbackEx);
+                }
+                throw ex;
+            } finally {
+                try {
+                    conn.setAutoCommit(true);
+                } catch (SQLException ignored) {
+                }
+            }
+        } catch (SQLException e) {
+            throw new DataAccessException("Failed to update username: " + e.getMessage(), e);
         }
-        return updated;
     }
 
     /**

@@ -564,15 +564,36 @@ public class StudentService {
             return;
         }
 
-        User existingUser = userDAO.findByUsername(normalizedUsername);
-        if (existingUser != null) {
-            throw new ValidationException("Username '" + normalizedUsername + "' is already in use.");
+        try (Connection conn = DBConnection.getConnection()) {
+            conn.setAutoCommit(false);
+            try {
+                User existingUser = userDAO.findByUsername(conn, normalizedUsername);
+                if (existingUser != null && existingUser.getId() != student.getUserId()) {
+                    throw new ValidationException("Username '" + normalizedUsername + "' is already in use.");
+                }
+
+                userDAO.updateUsername(conn, student.getUserId(), normalizedUsername);
+
+                auditService.log(conn, currentUser.getId(), "UPDATE_STUDENT_USERNAME", "STUDENT", studentId,
+                        user.getUsername(), normalizedUsername);
+
+                conn.commit();
+            } catch (Exception ex) {
+                try {
+                    conn.rollback();
+                } catch (SQLException rollbackEx) {
+                    ex.addSuppressed(rollbackEx);
+                }
+                throw ex;
+            } finally {
+                try {
+                    conn.setAutoCommit(true);
+                } catch (SQLException ignored) {
+                }
+            }
+        } catch (SQLException e) {
+            throw new DataAccessException("Failed to update student username: " + e.getMessage(), e);
         }
-
-        userDAO.updateUsername(student.getUserId(), normalizedUsername);
-
-        auditService.log(currentUser.getId(), "UPDATE_STUDENT_USERNAME", "STUDENT", studentId,
-                user.getUsername(), normalizedUsername);
     }
 
     /**

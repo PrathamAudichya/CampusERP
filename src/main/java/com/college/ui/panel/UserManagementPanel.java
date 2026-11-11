@@ -697,7 +697,7 @@ public class UserManagementPanel extends JPanel {
                     },
                     error -> {
                         saveBtn.setEnabled(true);
-                        SwingUtils.showError(dialog, "Failed to update username: " + error.getMessage());
+                        SwingUtils.showError(dialog, SwingUtils.getSafeUserErrorMessage(error, "Failed to update username"));
                     }
             );
         });
