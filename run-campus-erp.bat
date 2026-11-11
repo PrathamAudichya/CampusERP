@@ -65,19 +65,21 @@ REM Normalize whitespace
 set "USER_CHOICE=%USER_CHOICE: =%"
 
 if "%USER_CHOICE%"=="1" (
-    REM OPTION 1: Isolated Demonstration Database in %LOCALAPPDATA%
-    if "%LOCALAPPDATA%"=="" (
-        set "DEMO_DIR=%USERPROFILE%\AppData\Local\CampusERP\demo"
-    ) else (
-        set "DEMO_DIR=%LOCALAPPDATA%\CampusERP\demo"
-    )
-    if not exist "!DEMO_DIR!" mkdir "!DEMO_DIR!" 2>nul
-    set "TARGET_DB=!DEMO_DIR!\college-demo.db"
+    REM OPTION 1: Demonstration Database in project data/ directory
+    set "TARGET_DB=%PROJECT_DIR%\data\college-demo.db"
 
     echo.
+    echo ============================================================================
     echo [PROFILE] Connecting to DEMONSTRATION database:
     echo           !TARGET_DB!
     echo [STATUS]  Live production records are completely protected and isolated.
+    echo.
+    echo [SQLITE INSPECTION NOTE]
+    echo   To view tables and live updates in DB Browser for SQLite:
+    echo   1. File -^> Open Database -^> Select: !TARGET_DB!
+    echo   2. Contains all 28 tables, 8 triggers, and 66 indices.
+    echo   3. Press F5 or click 'Refresh' in DB Browser to view newly committed rows!
+    echo ============================================================================
     echo.
     goto :LAUNCH
 

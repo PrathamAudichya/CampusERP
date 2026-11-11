@@ -38,10 +38,10 @@ read -p "Choose an option (default: 1): " USER_CHOICE
 USER_CHOICE="${USER_CHOICE:-1}"
 
 if [ "${USER_CHOICE}" = "1" ]; then
-    DEMO_DIR="${HOME}/.campuserp/demo"
-    mkdir -p "${DEMO_DIR}"
-    TARGET_DB="${DEMO_DIR}/college-demo.db"
+    TARGET_DB="${PROJECT_DIR}/data/college-demo.db"
     echo "[PROFILE] Connecting to DEMONSTRATION database: ${TARGET_DB}"
+    echo "[STATUS] Live production records are completely protected and isolated."
+    echo "[SQLITE NOTE] Open ${TARGET_DB} in DB Browser and press F5 to refresh live updates."
 elif [ "${USER_CHOICE}" = "2" ]; then
     PROD_DB="${PROJECT_DIR}/data/college.db"
     echo "[WARNING] Live institutional database selected: ${PROD_DB}"
