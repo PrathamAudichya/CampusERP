@@ -29,23 +29,22 @@ if %ERRORLEVEL% neq 0 (
 )
 
 REM 2. Locate Application Executable JAR
-set "APP_JAR=%PROJECT_DIR%\release\CampusERP-v2.0.9-candidate.jar"
-if not exist "%APP_JAR%" (
-    if exist "%PROJECT_DIR%\target\CollegeManagementSystem.jar" (
-        set "APP_JAR=%PROJECT_DIR%\target\CollegeManagementSystem.jar"
-    ) else (
-        echo.
-        echo ============================================================================
-        echo [ERROR] Could not locate the Campus ERP application JAR.
-        echo Expected: %APP_JAR%
-        echo.
-        echo Please ensure the project has been built with:
-        echo   mvn clean package
-        echo ============================================================================
-        echo.
-        pause
-        exit /b 1
-    )
+if exist "%PROJECT_DIR%\target\CollegeManagementSystem.jar" (
+    set "APP_JAR=%PROJECT_DIR%\target\CollegeManagementSystem.jar"
+) else if exist "%PROJECT_DIR%\release\CampusERP-v2.0.9-candidate.jar" (
+    set "APP_JAR=%PROJECT_DIR%\release\CampusERP-v2.0.9-candidate.jar"
+) else (
+    echo.
+    echo ============================================================================
+    echo [ERROR] Could not locate the Campus ERP application JAR.
+    echo Expected: %PROJECT_DIR%\target\CollegeManagementSystem.jar
+    echo.
+    echo Please ensure the project has been built with:
+    echo   mvn clean package
+    echo ============================================================================
+    echo.
+    pause
+    exit /b 1
 )
 
 REM 3. Display Menu

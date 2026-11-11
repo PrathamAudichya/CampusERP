@@ -63,7 +63,6 @@ public class StudentPanel extends JPanel {
     private JTextField dobField;
     private JTextField admissionDateField;
     private JSpinner semesterSpinner;
-    private JPasswordField initialPasswordField;
 
     private JButton createButton;
     private JButton updateButton;
@@ -528,7 +527,6 @@ public class StudentPanel extends JPanel {
             semesterSpinner = new JSpinner(new SpinnerNumberModel(1, 1, 8, 1));
             expectedGraduationField = new JTextField("2030");
             schoolDegreeLabel = new JLabel("<html><small style='color:#68756D;'>Select programme to view faculty school</small></html>");
-            initialPasswordField = new JPasswordField("student123");
 
             // Program selection listener to auto-populate school, department, cohort, max semester & graduation year
             progFormCombo.addActionListener(e -> {
@@ -949,7 +947,10 @@ public class StudentPanel extends JPanel {
                     );
                     dlg.setVisible(true);
                 },
-                error -> createButton.setEnabled(true)
+                error -> {
+                    createButton.setEnabled(true);
+                    SwingUtils.showError(this, "Failed to create student: " + error.getMessage());
+                }
         );
     }
 
@@ -986,7 +987,10 @@ public class StudentPanel extends JPanel {
                     );
                     dlg.setVisible(true);
                 },
-                error -> resetPasswordButton.setEnabled(true)
+                error -> {
+                    resetPasswordButton.setEnabled(true);
+                    SwingUtils.showError(this, "Failed to reset student password: " + error.getMessage());
+                }
         );
     }
 
@@ -1022,10 +1026,16 @@ public class StudentPanel extends JPanel {
                                 SwingUtils.showInfo(this, "Username successfully changed to '" + newUsername.trim() + "'.");
                                 loadData();
                             },
-                            error -> changeUsernameButton.setEnabled(true)
+                            error -> {
+                                changeUsernameButton.setEnabled(true);
+                                SwingUtils.showError(this, "Failed to change student username: " + error.getMessage());
+                            }
                     );
                 },
-                error -> changeUsernameButton.setEnabled(true)
+                error -> {
+                    changeUsernameButton.setEnabled(true);
+                    SwingUtils.showError(this, "Failed to load linked student user account: " + error.getMessage());
+                }
         );
     }
 
@@ -1050,7 +1060,10 @@ public class StudentPanel extends JPanel {
                     forcePasswordChangeButton.setEnabled(true);
                     SwingUtils.showInfo(this, "Mandatory password change flag set for student " + stuCode + ".");
                 },
-                error -> forcePasswordChangeButton.setEnabled(true)
+                error -> {
+                    forcePasswordChangeButton.setEnabled(true);
+                    SwingUtils.showError(this, "Failed to enforce password change: " + error.getMessage());
+                }
         );
     }
 
@@ -1077,7 +1090,10 @@ public class StudentPanel extends JPanel {
                     SwingUtils.showInfo(this, "Student profile updated successfully.");
                     loadData();
                 },
-                error -> updateButton.setEnabled(true)
+                error -> {
+                    updateButton.setEnabled(true);
+                    SwingUtils.showError(this, "Failed to update student profile: " + error.getMessage());
+                }
         );
     }
 
@@ -1100,7 +1116,10 @@ public class StudentPanel extends JPanel {
                     SwingUtils.showInfo(this, "Student deactivated.");
                     loadData();
                 },
-                error -> deleteButton.setEnabled(true)
+                error -> {
+                    deleteButton.setEnabled(true);
+                    SwingUtils.showError(this, "Failed to deactivate student: " + error.getMessage());
+                }
         );
     }
 
@@ -1115,7 +1134,10 @@ public class StudentPanel extends JPanel {
                     SwingUtils.showInfo(this, "Student reactivated.");
                     loadData();
                 },
-                error -> reactivateButton.setEnabled(true)
+                error -> {
+                    reactivateButton.setEnabled(true);
+                    SwingUtils.showError(this, "Failed to reactivate student: " + error.getMessage());
+                }
         );
     }
 

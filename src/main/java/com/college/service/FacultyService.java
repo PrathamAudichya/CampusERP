@@ -369,6 +369,73 @@ public class FacultyService {
         return facultyDAO.findByDepartment(departmentId);
     }
 
+    /**
+     * Retrieves the linked user account for a faculty member.
+     *
+     * @param currentUser authenticated administrator or the faculty member themselves
+     * @param facultyId   primary key ID of the faculty record
+     * @return User account or null if not linked
+     */
+    public User getLinkedUserForFaculty(User currentUser, int facultyId) {
+        if (currentUser == null) {
+            throw new AuthenticationException("Authentication required.");
+        }
+        ValidationUtil.requirePositiveId(facultyId, "Faculty ID");
+        Faculty faculty = facultyDAO.findById(facultyId);
+        if (faculty == null) {
+            throw new ValidationException("Faculty " + facultyId + " not found.");
+        }
+        if (currentUser.getRole() != Role.ADMIN && currentUser.getId() != faculty.getUserId()) {
+            throw new AuthenticationException("Unauthorized to view user account for this faculty member.");
+        }
+        if (faculty.getUserId() <= 0) {
+            return null;
+        }
+        return userDAO.findById(faculty.getUserId());
+    }
+
+    /**
+     * Updates a faculty member's login username with uniqueness validation and audit logging (ADMIN only).
+     *
+     * @param currentUser authenticated administrator
+     * @param facultyId   primary key ID of the faculty record
+     * @param newUsername new username (normalized and uniqueness validated)
+     */
+    public void updateFacultyUsername(User currentUser, int facultyId, String newUsername) {
+        AuthService.requireRole(currentUser, Role.ADMIN);
+        ValidationUtil.requirePositiveId(facultyId, "Faculty ID");
+        ValidationUtil.requireNonEmpty(newUsername, "Username");
+
+        String normalizedUsername = newUsername.trim();
+        if (normalizedUsername.length() < 3 || normalizedUsername.length() > 50) {
+            throw new ValidationException("Username must be between 3 and 50 characters.");
+        }
+
+        Faculty faculty = facultyDAO.findById(facultyId);
+        if (faculty == null) {
+            throw new ValidationException("Faculty " + facultyId + " not found.");
+        }
+
+        User user = userDAO.findById(faculty.getUserId());
+        if (user == null) {
+            throw new ValidationException("Linked user account not found for faculty " + faculty.getFacultyId());
+        }
+
+        if (normalizedUsername.equalsIgnoreCase(user.getUsername())) {
+            return;
+        }
+
+        User existingUser = userDAO.findByUsername(normalizedUsername);
+        if (existingUser != null) {
+            throw new ValidationException("Username '" + normalizedUsername + "' is already in use.");
+        }
+
+        userDAO.updateUsername(faculty.getUserId(), normalizedUsername);
+
+        auditService.log(currentUser.getId(), "UPDATE_FACULTY_USERNAME", "FACULTY", facultyId,
+                user.getUsername(), normalizedUsername);
+    }
+
     private void validateFacultyInput(Faculty faculty) {
         if (faculty == null) {
             throw new ValidationException("Faculty entity cannot be null.");

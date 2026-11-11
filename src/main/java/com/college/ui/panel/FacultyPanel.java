@@ -57,6 +57,7 @@ public class FacultyPanel extends JPanel {
     private JButton deleteButton;
     private JButton reactivateButton;
     private JButton resetPasswordButton;
+    private JButton changeUsernameButton;
     private JButton refreshButton;
     private JButton viewDetailsButton;
     private JButton helpButton;
@@ -549,6 +550,10 @@ public class FacultyPanel extends JPanel {
         resetPasswordButton.setEnabled(false);
         resetPasswordButton.addActionListener(e -> resetSelectedFacultyPassword());
 
+        changeUsernameButton = SwingUtils.createSecondaryButton("Change Username");
+        changeUsernameButton.setEnabled(false);
+        changeUsernameButton.addActionListener(e -> changeFacultyUsername());
+
         deleteButton = SwingUtils.createSecondaryButton("Deactivate");
         deleteButton.setEnabled(false);
         deleteButton.addActionListener(e -> deleteFaculty());
@@ -562,6 +567,7 @@ public class FacultyPanel extends JPanel {
 
         buttonRow.add(clearButton);
         buttonRow.add(resetPasswordButton);
+        buttonRow.add(changeUsernameButton);
         buttonRow.add(reactivateButton);
         buttonRow.add(deleteButton);
         buttonRow.add(updateButton);
@@ -589,14 +595,16 @@ public class FacultyPanel extends JPanel {
                 () -> {
                     Faculty f = facultyDAO.findById(pk);
                     Department d = (f != null && f.getDepartmentId() > 0) ? departmentService.getDepartmentById(currentUser, f.getDepartmentId()) : null;
-                    return new Object[]{f, d};
+                    User u = (f != null) ? facultyService.getLinkedUserForFaculty(currentUser, f.getId()) : null;
+                    return new Object[]{f, d, u};
                 },
                 result -> {
                     Faculty f = (Faculty) result[0];
                     Department d = (Department) result[1];
+                    User u = (User) result[2];
                     if (f != null) {
                         Window parentWindow = SwingUtilities.getWindowAncestor(this);
-                        FacultyDetailsDialog dlg = new FacultyDetailsDialog(parentWindow, f, d);
+                        FacultyDetailsDialog dlg = new FacultyDetailsDialog(parentWindow, f, d, u);
                         dlg.setVisible(true);
                     } else {
                         SwingUtils.showError(this, "Faculty record could not be loaded.");
@@ -772,6 +780,7 @@ public class FacultyPanel extends JPanel {
         if (deleteButton != null) deleteButton.setEnabled(f.isActive());
         if (reactivateButton != null) reactivateButton.setEnabled(!f.isActive());
         if (resetPasswordButton != null) resetPasswordButton.setEnabled(f.isActive() && f.getUserId() > 0);
+        if (changeUsernameButton != null) changeUsernameButton.setEnabled(f.isActive() && f.getUserId() > 0);
     }
 
     private void createFaculty() {
@@ -809,7 +818,55 @@ public class FacultyPanel extends JPanel {
                     );
                     dlg.setVisible(true);
                 },
-                error -> createButton.setEnabled(true)
+                error -> {
+                    createButton.setEnabled(true);
+                    SwingUtils.showError(this, "Failed to create faculty: " + error.getMessage());
+                }
+        );
+    }
+
+    private void changeFacultyUsername() {
+        if (selectedFacultyPk == null) return;
+        Faculty cached = facultyCache.get(selectedFacultyPk);
+        String currentId = cached != null ? cached.getFacultyId() : "";
+
+        changeUsernameButton.setEnabled(false);
+        SwingUtils.executeAsync(
+                this,
+                () -> facultyService.getLinkedUserForFaculty(currentUser, selectedFacultyPk),
+                linkedUser -> {
+                    changeUsernameButton.setEnabled(true);
+                    String currentUsername = (linkedUser != null) ? linkedUser.getUsername() : currentId;
+                    String newUsername = JOptionPane.showInputDialog(
+                            this,
+                            "Enter new login username for faculty member " + currentId + ":",
+                            currentUsername
+                    );
+                    if (newUsername == null || newUsername.trim().isEmpty() || newUsername.trim().equals(currentUsername)) {
+                        return;
+                    }
+                    changeUsernameButton.setEnabled(false);
+                    SwingUtils.executeAsync(
+                            this,
+                            () -> {
+                                facultyService.updateFacultyUsername(currentUser, selectedFacultyPk, newUsername.trim());
+                                return null;
+                            },
+                            unused -> {
+                                changeUsernameButton.setEnabled(true);
+                                SwingUtils.showInfo(this, "Username successfully changed to '" + newUsername.trim() + "'.");
+                                loadData();
+                            },
+                            error -> {
+                                changeUsernameButton.setEnabled(true);
+                                SwingUtils.showError(this, "Failed to change faculty username: " + error.getMessage());
+                            }
+                    );
+                },
+                error -> {
+                    changeUsernameButton.setEnabled(true);
+                    SwingUtils.showError(this, "Failed to load linked faculty user account: " + error.getMessage());
+                }
         );
     }
 
@@ -874,7 +931,10 @@ public class FacultyPanel extends JPanel {
                     SwingUtils.showInfo(this, "Faculty profile updated successfully.");
                     loadData();
                 },
-                error -> updateButton.setEnabled(true)
+                error -> {
+                    updateButton.setEnabled(true);
+                    SwingUtils.showError(this, "Failed to update faculty: " + error.getMessage());
+                }
         );
     }
 
@@ -897,7 +957,10 @@ public class FacultyPanel extends JPanel {
                     SwingUtils.showInfo(this, "Faculty member deactivated.");
                     loadData();
                 },
-                error -> deleteButton.setEnabled(true)
+                error -> {
+                    deleteButton.setEnabled(true);
+                    SwingUtils.showError(this, "Failed to deactivate faculty: " + error.getMessage());
+                }
         );
     }
 
@@ -912,7 +975,10 @@ public class FacultyPanel extends JPanel {
                     SwingUtils.showInfo(this, "Faculty member reactivated.");
                     loadData();
                 },
-                error -> reactivateButton.setEnabled(true)
+                error -> {
+                    reactivateButton.setEnabled(true);
+                    SwingUtils.showError(this, "Failed to reactivate faculty: " + error.getMessage());
+                }
         );
     }
 

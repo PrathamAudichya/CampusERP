@@ -17,14 +17,13 @@ if ! command -v java &> /dev/null; then
 fi
 
 # 2. Locate Application Executable JAR
-APP_JAR="${PROJECT_DIR}/release/CampusERP-v2.0.9-candidate.jar"
-if [ ! -f "${APP_JAR}" ]; then
-    if [ -f "${PROJECT_DIR}/target/CollegeManagementSystem.jar" ]; then
-        APP_JAR="${PROJECT_DIR}/target/CollegeManagementSystem.jar"
-    else
-        echo "[ERROR] Could not locate application JAR at ${APP_JAR} or target/CollegeManagementSystem.jar"
-        exit 1
-    fi
+if [ -f "${PROJECT_DIR}/target/CollegeManagementSystem.jar" ]; then
+    APP_JAR="${PROJECT_DIR}/target/CollegeManagementSystem.jar"
+elif [ -f "${PROJECT_DIR}/release/CampusERP-v2.0.9-candidate.jar" ]; then
+    APP_JAR="${PROJECT_DIR}/release/CampusERP-v2.0.9-candidate.jar"
+else
+    echo "[ERROR] Could not locate application JAR at target/CollegeManagementSystem.jar or ${PROJECT_DIR}/release/CampusERP-v2.0.9-candidate.jar"
+    exit 1
 fi
 
 # 3. Interactive Menu

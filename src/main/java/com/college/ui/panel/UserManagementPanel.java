@@ -411,9 +411,20 @@ public class UserManagementPanel extends JPanel {
         content.add(grid);
         dialog.add(content, BorderLayout.CENTER);
 
-        JPanel btnPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 16, 12));
+        JPanel btnPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 12, 12));
         btnPanel.setBackground(CampusTheme.BG_MAIN);
         btnPanel.setBorder(BorderFactory.createMatteBorder(1, 0, 0, 0, CampusTheme.BORDER));
+
+        if (item.getUserId() > 0) {
+            JButton editUserBtn = new SecondaryButton("Edit Username");
+            editUserBtn.setIcon(CampusIcons.get(CampusIcons.IconType.PROFILE, 14, CampusTheme.TEXT_SECONDARY));
+            editUserBtn.addActionListener(e -> {
+                dialog.dispose();
+                editSelectedUserUsername();
+            });
+            btnPanel.add(editUserBtn);
+        }
+
         JButton close = new PrimaryButton("Close");
         close.setPreferredSize(new Dimension(90, 32));
         close.addActionListener(e -> dialog.dispose());
