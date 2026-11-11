@@ -17,14 +17,13 @@ if ! command -v java &> /dev/null; then
 fi
 
 # 2. Locate Application Executable JAR
-APP_JAR="${PROJECT_DIR}/release/CampusERP-v2.0.9-candidate.jar"
-if [ ! -f "${APP_JAR}" ]; then
-    if [ -f "${PROJECT_DIR}/target/CollegeManagementSystem.jar" ]; then
-        APP_JAR="${PROJECT_DIR}/target/CollegeManagementSystem.jar"
-    else
-        echo "[ERROR] Could not locate application JAR at ${APP_JAR} or target/CollegeManagementSystem.jar"
-        exit 1
-    fi
+if [ -f "${PROJECT_DIR}/target/CollegeManagementSystem.jar" ]; then
+    APP_JAR="${PROJECT_DIR}/target/CollegeManagementSystem.jar"
+else
+    echo "[ERROR] Current build artifact not found at: ${PROJECT_DIR}/target/CollegeManagementSystem.jar"
+    echo "Campus ERP will NOT fall back to outdated historical release candidate JARs."
+    echo "Please package the application first using: mvn clean package -DskipTests"
+    exit 1
 fi
 
 # 3. Interactive Menu
@@ -39,10 +38,10 @@ read -p "Choose an option (default: 1): " USER_CHOICE
 USER_CHOICE="${USER_CHOICE:-1}"
 
 if [ "${USER_CHOICE}" = "1" ]; then
-    DEMO_DIR="${HOME}/.campuserp/demo"
-    mkdir -p "${DEMO_DIR}"
-    TARGET_DB="${DEMO_DIR}/college-demo.db"
+    TARGET_DB="${PROJECT_DIR}/data/college-demo.db"
     echo "[PROFILE] Connecting to DEMONSTRATION database: ${TARGET_DB}"
+    echo "[STATUS] Live production records are completely protected and isolated."
+    echo "[SQLITE NOTE] Open ${TARGET_DB} in DB Browser and press F5 to refresh live updates."
 elif [ "${USER_CHOICE}" = "2" ]; then
     PROD_DB="${PROJECT_DIR}/data/college.db"
     echo "[WARNING] Live institutional database selected: ${PROD_DB}"

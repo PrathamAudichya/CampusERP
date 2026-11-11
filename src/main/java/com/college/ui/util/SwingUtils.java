@@ -99,17 +99,19 @@ public final class SwingUtils {
                     }
                 } catch (ExecutionException e) {
                     Throwable cause = (e.getCause() != null) ? e.getCause() : e;
-                    if (cause instanceof ValidationException) {
-                        showWarning(parent, cause.getMessage());
-                    } else if (cause instanceof AuthenticationException) {
-                        showError(parent, cause.getMessage());
-                    } else if (cause instanceof DataAccessException) {
-                        showError(parent, "Database error: " + cause.getMessage());
-                    } else {
-                        showError(parent, "An unexpected error occurred: " + cause.getMessage());
-                    }
+                    System.err.println("[ERROR] Asynchronous execution failed: " + cause.getMessage());
+                    cause.printStackTrace(System.err);
+
                     if (onError != null) {
                         onError.accept(cause);
+                    } else {
+                        if (cause instanceof ValidationException) {
+                            showWarning(parent, cause.getMessage());
+                        } else if (cause instanceof AuthenticationException) {
+                            showError(parent, cause.getMessage());
+                        } else {
+                            showError(parent, getSafeUserErrorMessage(cause, "Operation failed"));
+                        }
                     }
                 } finally {
                     if (root != null) {
@@ -173,6 +175,36 @@ public final class SwingUtils {
     public static boolean showConfirm(Component parent, String message, String title) {
         int opt = JOptionPane.showConfirmDialog(parent, message, title, JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
         return opt == JOptionPane.YES_OPTION;
+    }
+
+    /**
+     * Extracts a safe, sanitized user-facing error message from a Throwable.
+     * Business validation and authentication exceptions preserve their clear user-directed messages.
+     * Technical, SQL, and internal database exceptions are sanitized to prevent exposing sensitive internal
+     * schema or system details, while retaining detailed diagnostics and stack traces in application logs.
+     *
+     * @param throwable      the error to inspect
+     * @param defaultContext description of the attempted action (e.g., "Failed to update username")
+     * @return safe user-facing message
+     */
+    public static String getSafeUserErrorMessage(Throwable throwable, String defaultContext) {
+        if (throwable == null) {
+            return defaultContext;
+        }
+        // Retain detailed error diagnostics in application logs
+        System.err.println("[ERROR] Exception during " + defaultContext + ": " + throwable.getMessage());
+        throwable.printStackTrace(System.err);
+
+        if (throwable instanceof ValidationException || throwable instanceof AuthenticationException || throwable instanceof IllegalArgumentException) {
+            String msg = throwable.getMessage();
+            return (msg != null && !msg.isBlank()) ? msg : defaultContext;
+        }
+
+        if (throwable instanceof DataAccessException || (throwable.getCause() instanceof java.sql.SQLException)) {
+            return defaultContext + ": A database error occurred. Please contact your system administrator.";
+        }
+
+        return defaultContext + ": An unexpected error occurred. Please try again or check application logs.";
     }
 
     // =========================================================================

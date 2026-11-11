@@ -26,14 +26,35 @@ public class App {
      *             --init-schema-only : Initializes database schema only without demo seed records
      */
     public static void main(String[] args) {
+        // CLI database mode and target path processing
+        configureDatabaseFromArgs(args);
+
         // Headless CLI argument processing
-        if (args != null && args.length >= 1 && "--setup-admin".equalsIgnoreCase(args[0])) {
-            int exitCode = handleSetupAdminCli(args, System.console());
+        boolean initSchemaOnly = false;
+        boolean setupAdmin = false;
+        String setupAdminUser = null;
+
+        if (args != null) {
+            for (int i = 0; i < args.length; i++) {
+                if ("--init-schema-only".equalsIgnoreCase(args[i])) {
+                    initSchemaOnly = true;
+                } else if ("--setup-admin".equalsIgnoreCase(args[i])) {
+                    setupAdmin = true;
+                    if (i + 1 < args.length && !args[i + 1].startsWith("--")) {
+                        setupAdminUser = args[++i];
+                    }
+                }
+            }
+        }
+
+        if (setupAdmin) {
+            String[] adminArgs = setupAdminUser != null ? new String[]{"--setup-admin", setupAdminUser} : new String[]{"--setup-admin"};
+            int exitCode = handleSetupAdminCli(adminArgs, System.console());
             System.exit(exitCode);
             return;
         }
 
-        if (args != null && args.length >= 1 && "--init-schema-only".equalsIgnoreCase(args[0])) {
+        if (initSchemaOnly) {
             try {
                 DatabaseInitializer.initializeSchemaOnly();
                 System.out.println("Clean database schema initialized successfully (no demo seed data).");
@@ -45,7 +66,22 @@ public class App {
             return;
         }
 
+        String activeDbPath = System.getProperty("college.db.path", DBConnection.DEFAULT_DB_PATH);
+        boolean isExplicitProd = activeDbPath.replace('\\', '/').endsWith("data/college.db");
+        boolean isExplicitDemo = activeDbPath.replace('\\', '/').endsWith("data/college-demo.db");
+
+        System.out.println("================================================================================");
         System.out.println(AppConfig.APP_NAME + " v" + AppConfig.APP_VERSION);
+        if (isExplicitProd) {
+            System.out.println("[DATABASE MODE: PRODUCTION] Connected to live institutional database: " + activeDbPath);
+            System.out.println("[NOTICE] All changes directly alter live production records.");
+        } else if (isExplicitDemo) {
+            System.out.println("[DATABASE MODE: DEMO] Connected to isolated demonstration database: " + activeDbPath);
+            System.out.println("[SAFETY] Live production records are completely protected and isolated.");
+        } else {
+            System.out.println("[DATABASE MODE: CUSTOM/TEST] Connected to database: " + activeDbPath);
+        }
+        System.out.println("================================================================================");
         System.out.println("Initializing database and presentation layer...");
 
         // Inspect and log attached database file path
@@ -152,6 +188,26 @@ public class App {
             }
             if (confirmChars != null) {
                 java.util.Arrays.fill(confirmChars, ' ');
+            }
+        }
+    }
+
+    /**
+     * Parses command-line arguments to explicitly configure the database target path.
+     * Supports --demo, --production / --prod, and --db &lt;path&gt;.
+     *
+     * @param args Command-line arguments passed to the application
+     */
+    public static void configureDatabaseFromArgs(String[] args) {
+        if (args != null) {
+            for (int i = 0; i < args.length; i++) {
+                if ("--demo".equalsIgnoreCase(args[i])) {
+                    System.setProperty("college.db.path", "data/college-demo.db");
+                } else if ("--production".equalsIgnoreCase(args[i]) || "--prod".equalsIgnoreCase(args[i])) {
+                    System.setProperty("college.db.path", "data/college.db");
+                } else if ("--db".equalsIgnoreCase(args[i]) && i + 1 < args.length) {
+                    System.setProperty("college.db.path", args[++i]);
+                }
             }
         }
     }

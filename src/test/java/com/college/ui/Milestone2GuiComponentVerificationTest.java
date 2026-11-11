@@ -12,6 +12,7 @@ import com.college.ui.dialog.TemporaryPasswordDialog;
 import com.college.ui.panel.FacultyPanel;
 import com.college.ui.panel.StudentPanel;
 import com.college.ui.panel.UserManagementPanel;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -29,8 +30,9 @@ import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Automated Swing Event Dispatch Thread (EDT) UI verification suite for Milestone 2.
- * Validates UI component tree, card layouts, table structures, and dialogs across
- * User Management, Student Profile Cards, Faculty Profile Cards, and Credential Dialogs.
+ * Note: These automated tests verify Swing component instantiation, layouts, and data bindings
+ * on the EDT. They do not substitute for actual end-user interactive GUI acceptance testing
+ * performed on the desktop using run-campus-erp.bat.
  */
 public class Milestone2GuiComponentVerificationTest {
 
@@ -38,9 +40,11 @@ public class Milestone2GuiComponentVerificationTest {
     private static User adminUser;
     private static User facultyUser;
     private static User studentUser;
+    private static String savedDbProperty;
 
     @BeforeAll
     public static void setUpDemoDatabase() throws Exception {
+        savedDbProperty = System.getProperty("college.db.path");
         Files.createDirectories(DEMO_DB_PATH.getParent());
         Files.deleteIfExists(DEMO_DB_PATH);
 
@@ -210,6 +214,15 @@ public class Milestone2GuiComponentVerificationTest {
             }
         }
         return list;
+    }
+
+    @AfterAll
+    public static void tearDown() {
+        if (savedDbProperty != null) {
+            System.setProperty("college.db.path", savedDbProperty);
+        } else {
+            System.clearProperty("college.db.path");
+        }
     }
 }
 

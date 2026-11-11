@@ -15,7 +15,21 @@ public class ExistingDbMigrationTest {
     @Test
     public void testFullMigrationPipeline() throws Exception {
         File dbFile = new File("target/inspect-demo.db");
-        Assumptions.assumeTrue(dbFile.exists(), "inspect-demo.db not present; skipping migration inspection");
+        if (!dbFile.exists()) {
+            dbFile.getParentFile().mkdirs();
+            try (Connection setup = DriverManager.getConnection("jdbc:sqlite:target/inspect-demo.db")) {
+                try (Statement s = setup.createStatement()) {
+                    s.execute("CREATE TABLE IF NOT EXISTS departments (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, code TEXT NOT NULL UNIQUE)");
+                    s.execute("CREATE TABLE IF NOT EXISTS courses (id INTEGER PRIMARY KEY AUTOINCREMENT, department_id INTEGER, name TEXT, code TEXT)");
+                    s.execute("CREATE TABLE IF NOT EXISTS faculty (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, department_id INTEGER)");
+                    s.execute("CREATE TABLE IF NOT EXISTS students (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, department_id INTEGER)");
+                    s.execute("CREATE TABLE IF NOT EXISTS enrollments (id INTEGER PRIMARY KEY AUTOINCREMENT, student_id INTEGER, course_id INTEGER)");
+                    s.execute("CREATE TABLE IF NOT EXISTS attendance (id INTEGER PRIMARY KEY AUTOINCREMENT, enrollment_id INTEGER, status TEXT, marked_at TEXT)");
+                    s.execute("CREATE TABLE IF NOT EXISTS fee_payments (id INTEGER PRIMARY KEY AUTOINCREMENT, student_id INTEGER, amount REAL, status TEXT)");
+                }
+            }
+        }
+        assertTrue(dbFile.exists(), "inspect-demo.db must exist for migration testing");
 
         try (Connection conn = DriverManager.getConnection("jdbc:sqlite:target/inspect-demo.db")) {
             conn.setAutoCommit(false);

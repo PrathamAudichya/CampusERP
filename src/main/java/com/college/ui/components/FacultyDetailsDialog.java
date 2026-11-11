@@ -2,6 +2,7 @@ package com.college.ui.components;
 
 import com.college.model.Department;
 import com.college.model.Faculty;
+import com.college.model.User;
 import com.college.ui.theme.CampusTheme;
 import com.college.ui.util.SwingUtils;
 
@@ -11,19 +12,23 @@ import java.awt.datatransfer.StringSelection;
 
 /**
  * Modal dialog for inspecting the complete, untruncated profile of a Faculty member.
- * Displays all academic appointment, specialization, contact, and departmental information without clipping.
+ * Displays all academic appointment, specialization, contact, credentials, and departmental information without clipping.
  */
 public class FacultyDetailsDialog extends JDialog {
 
     public FacultyDetailsDialog(Window owner, Faculty faculty, Department department) {
-        super(owner, "Faculty Member Details — " + faculty.getFacultyId(), ModalityType.APPLICATION_MODAL);
-        initUI(faculty, department);
+        this(owner, faculty, department, null);
     }
 
-    private void initUI(Faculty f, Department d) {
+    public FacultyDetailsDialog(Window owner, Faculty faculty, Department department, User linkedUser) {
+        super(owner, "Faculty Member Details \u2014 " + faculty.getFacultyId(), ModalityType.APPLICATION_MODAL);
+        initUI(faculty, department, linkedUser);
+    }
+
+    private void initUI(Faculty f, Department d, User u) {
         setDefaultCloseOperation(DISPOSE_ON_CLOSE);
-        setSize(620, 520);
-        setMinimumSize(new Dimension(520, 420));
+        setSize(620, 560);
+        setMinimumSize(new Dimension(520, 440));
         setLocationRelativeTo(getOwner());
 
         JPanel root = new JPanel(new BorderLayout(12, 12));
@@ -45,7 +50,7 @@ public class FacultyDetailsDialog extends JDialog {
         nameLabel.setForeground(CampusTheme.PRIMARY);
 
         String deptStr = (d != null) ? d.getName() + " (" + d.getCode() + ")" : "Department #" + f.getDepartmentId();
-        JLabel subLabel = new JLabel("ID: " + f.getFacultyId() + "  •  " + deptStr);
+        JLabel subLabel = new JLabel("ID: " + f.getFacultyId() + "  \u2022  " + deptStr);
         subLabel.setFont(CampusTheme.FONT_SMALL);
         subLabel.setForeground(CampusTheme.TEXT_SECONDARY);
         namePanel.add(nameLabel);
@@ -94,6 +99,23 @@ public class FacultyDetailsDialog extends JDialog {
         bodyPanel.add(contactCard);
         bodyPanel.add(Box.createVerticalStrut(12));
 
+        // Account & Security Card
+        JPanel secCard = SwingUtils.createCardPanel("System Account & Credentials");
+        JPanel secGrid = new JPanel(new GridBagLayout());
+        secGrid.setOpaque(false);
+        row = 0;
+        if (u != null) {
+            addDetailRow(secGrid, gbc, row++, "Account Username:", u.getUsername());
+            addDetailRow(secGrid, gbc, row++, "Account Status:", u.isActive() ? "Active" : "Disabled");
+            addDetailRow(secGrid, gbc, row++, "Role:", u.getRole() != null ? u.getRole().name() : "FACULTY");
+            addDetailRow(secGrid, gbc, row++, "Password Policy:", u.isMustChangePassword() ? "Temporary \u2014 Must Change on Next Login" : "Standard Active");
+        } else {
+            addDetailRow(secGrid, gbc, row++, "User Account:", "No user account linked to this faculty record");
+        }
+        secCard.add(secGrid, BorderLayout.CENTER);
+        bodyPanel.add(secCard);
+        bodyPanel.add(Box.createVerticalStrut(12));
+
         // System Status Card
         JPanel statusCard = SwingUtils.createCardPanel("Institutional System Status");
         JPanel statusGrid = new JPanel(new GridBagLayout());
@@ -137,9 +159,13 @@ public class FacultyDetailsDialog extends JDialog {
             sb.append("Email Address:  ").append(f.getEmail()).append("\n");
             sb.append("Phone Number:   ").append(f.getPhone() != null ? f.getPhone() : "N/A").append("\n");
             sb.append("Status:         ").append(f.isActive() ? "Active" : "Inactive").append("\n");
+            if (u != null) {
+                sb.append("Account User:   ").append(u.getUsername()).append("\n");
+                sb.append("Password State: ").append(u.isMustChangePassword() ? "Temporary (Change Pending)" : "Active").append("\n");
+            }
             sb.append("=================================\n");
             Toolkit.getDefaultToolkit().getSystemClipboard().setContents(new StringSelection(sb.toString()), null);
-            statusLabel.setText("✓ Copied full record to clipboard.");
+            statusLabel.setText("\u2713 Copied full record to clipboard.");
         });
         btnRow.add(copyBtn);
 

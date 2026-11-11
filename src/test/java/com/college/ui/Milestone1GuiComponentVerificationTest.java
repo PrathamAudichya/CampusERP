@@ -8,6 +8,7 @@ import com.college.model.Faculty;
 import com.college.model.Role;
 import com.college.model.Student;
 import com.college.model.User;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -23,9 +24,10 @@ import java.sql.DriverManager;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * Automated Swing Event Dispatch Thread (EDT) UI component verification suite for Milestone 1.
- * Tests MainFrame navigation and panel lifecycle across Admin, Faculty, and Student roles
- * against a disposable migrated database.
+ * Automated Swing Event Dispatch Thread (EDT) UI component smoke/verification suite for Milestone 1.
+ * Note: These automated tests verify Swing component instantiation, layouts, and data bindings
+ * on the EDT. They do not substitute for actual end-user interactive GUI acceptance testing
+ * performed on the desktop using run-campus-erp.bat.
  */
 public class Milestone1GuiComponentVerificationTest {
 
@@ -33,9 +35,11 @@ public class Milestone1GuiComponentVerificationTest {
     private static User adminUser;
     private static User facultyUser;
     private static User studentUser;
+    private static String savedDbProperty;
 
     @BeforeAll
     public static void setUpDemoDatabase() throws Exception {
+        savedDbProperty = System.getProperty("college.db.path");
         Files.createDirectories(DEMO_DB_PATH.getParent());
         Files.deleteIfExists(DEMO_DB_PATH);
 
@@ -120,5 +124,14 @@ public class Milestone1GuiComponentVerificationTest {
                 frame.dispose();
             }, "Student MainFrame must instantiate student dashboard, courses, timetable, fees, and profile without errors");
         });
+    }
+
+    @AfterAll
+    public static void tearDown() {
+        if (savedDbProperty != null) {
+            System.setProperty("college.db.path", savedDbProperty);
+        } else {
+            System.clearProperty("college.db.path");
+        }
     }
 }

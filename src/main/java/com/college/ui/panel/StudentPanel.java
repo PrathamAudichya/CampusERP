@@ -63,7 +63,6 @@ public class StudentPanel extends JPanel {
     private JTextField dobField;
     private JTextField admissionDateField;
     private JSpinner semesterSpinner;
-    private JPasswordField initialPasswordField;
 
     private JButton createButton;
     private JButton updateButton;
@@ -528,7 +527,6 @@ public class StudentPanel extends JPanel {
             semesterSpinner = new JSpinner(new SpinnerNumberModel(1, 1, 8, 1));
             expectedGraduationField = new JTextField("2030");
             schoolDegreeLabel = new JLabel("<html><small style='color:#68756D;'>Select programme to view faculty school</small></html>");
-            initialPasswordField = new JPasswordField("student123");
 
             // Program selection listener to auto-populate school, department, cohort, max semester & graduation year
             progFormCombo.addActionListener(e -> {
@@ -852,15 +850,16 @@ public class StudentPanel extends JPanel {
 
         int modelRow = studentTable.convertRowIndexToModel(viewRow);
         selectedStudentPk = (Integer) tableModel.getValueAt(modelRow, 0);
-        Student cached = studentCache.get(selectedStudentPk);
+        final Integer targetStudentPk = selectedStudentPk;
+        Student cached = studentCache.get(targetStudentPk);
         if (cached != null) {
             populateFormFromStudent(cached);
         } else {
             SwingUtils.executeAsync(
                     this,
-                    () -> studentService.getStudentById(currentUser, selectedStudentPk),
+                    () -> studentService.getStudentById(currentUser, targetStudentPk),
                     s -> {
-                        if (s != null) {
+                        if (s != null && java.util.Objects.equals(selectedStudentPk, targetStudentPk)) {
                             studentCache.put(s.getId(), s);
                             populateFormFromStudent(s);
                         }
@@ -949,14 +948,18 @@ public class StudentPanel extends JPanel {
                     );
                     dlg.setVisible(true);
                 },
-                error -> createButton.setEnabled(true)
+                error -> {
+                    createButton.setEnabled(true);
+                    SwingUtils.showError(this, SwingUtils.getSafeUserErrorMessage(error, "Failed to create student"));
+                }
         );
     }
 
     private void resetStudentPassword() {
         if (selectedStudentPk == null) return;
-        Student cached = studentCache.get(selectedStudentPk);
-        String stuCode = cached != null ? cached.getStudentId() : "ID " + selectedStudentPk;
+        final Integer targetStudentPk = selectedStudentPk;
+        Student cached = studentCache.get(targetStudentPk);
+        String stuCode = cached != null ? cached.getStudentId() : "ID " + targetStudentPk;
 
         boolean confirm = SwingUtils.showConfirm(this,
                 "Reset credentials for student " + stuCode + "?\n\n"
@@ -969,8 +972,8 @@ public class StudentPanel extends JPanel {
         SwingUtils.executeAsync(
                 this,
                 () -> {
-                    String tempPass = studentService.resetStudentPassword(currentUser, selectedStudentPk);
-                    User linkedUser = studentService.getLinkedUserForStudent(currentUser, selectedStudentPk);
+                    String tempPass = studentService.resetStudentPassword(currentUser, targetStudentPk);
+                    User linkedUser = studentService.getLinkedUserForStudent(currentUser, targetStudentPk);
                     String username = (linkedUser != null) ? linkedUser.getUsername() : stuCode;
                     return new String[]{stuCode, username, tempPass};
                 },
@@ -986,19 +989,23 @@ public class StudentPanel extends JPanel {
                     );
                     dlg.setVisible(true);
                 },
-                error -> resetPasswordButton.setEnabled(true)
+                error -> {
+                    resetPasswordButton.setEnabled(true);
+                    SwingUtils.showError(this, SwingUtils.getSafeUserErrorMessage(error, "Failed to reset student password"));
+                }
         );
     }
 
     private void changeStudentUsername() {
         if (selectedStudentPk == null) return;
-        Student cached = studentCache.get(selectedStudentPk);
+        final Integer targetStudentPk = selectedStudentPk;
+        Student cached = studentCache.get(targetStudentPk);
         String currentId = cached != null ? cached.getStudentId() : "";
 
         changeUsernameButton.setEnabled(false);
         SwingUtils.executeAsync(
                 this,
-                () -> studentService.getLinkedUserForStudent(currentUser, selectedStudentPk),
+                () -> studentService.getLinkedUserForStudent(currentUser, targetStudentPk),
                 linkedUser -> {
                     changeUsernameButton.setEnabled(true);
                     String currentUsername = (linkedUser != null) ? linkedUser.getUsername() : currentId;
@@ -1014,7 +1021,7 @@ public class StudentPanel extends JPanel {
                     SwingUtils.executeAsync(
                             this,
                             () -> {
-                                studentService.updateStudentUsername(currentUser, selectedStudentPk, newUsername.trim());
+                                studentService.updateStudentUsername(currentUser, targetStudentPk, newUsername.trim());
                                 return null;
                             },
                             unused -> {
@@ -1022,17 +1029,24 @@ public class StudentPanel extends JPanel {
                                 SwingUtils.showInfo(this, "Username successfully changed to '" + newUsername.trim() + "'.");
                                 loadData();
                             },
-                            error -> changeUsernameButton.setEnabled(true)
+                            error -> {
+                                changeUsernameButton.setEnabled(true);
+                                SwingUtils.showError(this, SwingUtils.getSafeUserErrorMessage(error, "Failed to change student username"));
+                            }
                     );
                 },
-                error -> changeUsernameButton.setEnabled(true)
+                error -> {
+                    changeUsernameButton.setEnabled(true);
+                    SwingUtils.showError(this, SwingUtils.getSafeUserErrorMessage(error, "Failed to load linked student user account"));
+                }
         );
     }
 
     private void forceStudentPasswordChange() {
         if (selectedStudentPk == null) return;
-        Student cached = studentCache.get(selectedStudentPk);
-        String stuCode = cached != null ? cached.getStudentId() : "ID " + selectedStudentPk;
+        final Integer targetStudentPk = selectedStudentPk;
+        Student cached = studentCache.get(targetStudentPk);
+        String stuCode = cached != null ? cached.getStudentId() : "ID " + targetStudentPk;
 
         boolean confirm = SwingUtils.showConfirm(this,
                 "Require student " + stuCode + " to change their password upon their next login?",
@@ -1043,24 +1057,28 @@ public class StudentPanel extends JPanel {
         SwingUtils.executeAsync(
                 this,
                 () -> {
-                    studentService.forcePasswordChange(currentUser, selectedStudentPk);
+                    studentService.forcePasswordChange(currentUser, targetStudentPk);
                     return null;
                 },
                 unused -> {
                     forcePasswordChangeButton.setEnabled(true);
                     SwingUtils.showInfo(this, "Mandatory password change flag set for student " + stuCode + ".");
                 },
-                error -> forcePasswordChangeButton.setEnabled(true)
+                error -> {
+                    forcePasswordChangeButton.setEnabled(true);
+                    SwingUtils.showError(this, SwingUtils.getSafeUserErrorMessage(error, "Failed to enforce password change"));
+                }
         );
     }
 
     private void updateStudent() {
         if (selectedStudentPk == null) return;
+        final Integer targetStudentPk = selectedStudentPk;
         Student s = buildStudentFromForm();
         if (s == null) return;
-        s.setId(selectedStudentPk);
+        s.setId(targetStudentPk);
 
-        Student existing = studentCache.get(selectedStudentPk);
+        Student existing = studentCache.get(targetStudentPk);
         if (existing != null) {
             s.setActive(existing.isActive());
             s.setUserId(existing.getUserId());
@@ -1077,14 +1095,18 @@ public class StudentPanel extends JPanel {
                     SwingUtils.showInfo(this, "Student profile updated successfully.");
                     loadData();
                 },
-                error -> updateButton.setEnabled(true)
+                error -> {
+                    updateButton.setEnabled(true);
+                    SwingUtils.showError(this, SwingUtils.getSafeUserErrorMessage(error, "Failed to update student profile"));
+                }
         );
     }
 
     private void deleteStudent() {
         if (selectedStudentPk == null) return;
+        final Integer targetStudentPk = selectedStudentPk;
         boolean confirm = SwingUtils.showConfirm(this,
-                "Are you sure you want to deactivate student ID " + selectedStudentPk + "?",
+                "Are you sure you want to deactivate student ID " + targetStudentPk + "?",
                 "Confirm Deactivation");
         if (!confirm) return;
 
@@ -1092,7 +1114,7 @@ public class StudentPanel extends JPanel {
         SwingUtils.executeAsync(
                 this,
                 () -> {
-                    studentService.deleteStudent(currentUser, selectedStudentPk);
+                    studentService.deleteStudent(currentUser, targetStudentPk);
                     return null;
                 },
                 unused -> {
@@ -1100,22 +1122,29 @@ public class StudentPanel extends JPanel {
                     SwingUtils.showInfo(this, "Student deactivated.");
                     loadData();
                 },
-                error -> deleteButton.setEnabled(true)
+                error -> {
+                    deleteButton.setEnabled(true);
+                    SwingUtils.showError(this, SwingUtils.getSafeUserErrorMessage(error, "Failed to deactivate student"));
+                }
         );
     }
 
     private void reactivateStudent() {
         if (selectedStudentPk == null) return;
+        final Integer targetStudentPk = selectedStudentPk;
         reactivateButton.setEnabled(false);
         SwingUtils.executeAsync(
                 this,
-                () -> studentService.reactivateStudent(currentUser, selectedStudentPk),
+                () -> studentService.reactivateStudent(currentUser, targetStudentPk),
                 reactivated -> {
                     reactivateButton.setEnabled(true);
                     SwingUtils.showInfo(this, "Student reactivated.");
                     loadData();
                 },
-                error -> reactivateButton.setEnabled(true)
+                error -> {
+                    reactivateButton.setEnabled(true);
+                    SwingUtils.showError(this, SwingUtils.getSafeUserErrorMessage(error, "Failed to reactivate student"));
+                }
         );
     }
 
