@@ -113,3 +113,32 @@ The system employs a deterministic, forward-only additive migration pipeline in 
 ### Idempotency Guarantee
 All schema alterations check for column existence via `PRAGMA table_info` before executing `ALTER TABLE ADD COLUMN`. Duplicate executions produce zero errors, zero duplicate columns, and zero data loss.
 
+---
+
+## 5. Database Separation Architecture (Milestone 0.3)
+
+Campus ERP strictly separates database environments into four isolated profiles:
+
+```mermaid
+flowchart TD
+    APP["Campus ERP Application"]
+    PROFILE{"DatabaseProfile"}
+
+    APP --> PROFILE
+
+    PROFILE -- "--db-mode=standard (Default)" --> STD["STANDARD PROFILE<br/>%LOCALAPPDATA%/CampusERP/database/campuserp.db<br/>Clean schema + V1-V11 migrations<br/>Zero synthetic seeds"]
+    PROFILE -- "--db-mode=demo" --> DEMO["DEMO PROFILE<br/>%LOCALAPPDATA%/CampusERP/demo/campuserp-demo.db<br/>Clean schema + V1-V11 migrations<br/>Seeded synthetic records"]
+    PROFILE -- "JUnit Suites" --> TEST["TEST PROFILE<br/>%TEMP%/CampusERP-tests/<br/>Isolated disposable fixtures"]
+    PROFILE -- "Historical Reference" --> HIST["HISTORICAL BASELINE<br/>data/college.db<br/>Milestone 1 snapshot (SHA-256 locked)<br/>Read-only, NO migrations, NO seeds"]
+```
+
+### 5.1 Profile Specification
+
+| Profile | Storage Location | Synthetic Data (`seed.sql`) | Forward Migrations (V1–V11) | Security / Write Policy |
+| :--- | :--- | :--- | :--- | :--- |
+| **`STANDARD`** | `%LOCALAPPDATA%\CampusERP\database\campuserp.db` | **Prohibited** (0 seed records) | Automatically applied | Standard institutional profile. Admin account provisioned via wizard/CLI. |
+| **`DEMO`** | `%LOCALAPPDATA%\CampusERP\demo\campuserp-demo.db` | **Populated** (Users, Depts, Courses) | Automatically applied | Interactive demonstrations & testing. Isolated from production records. |
+| **`TEST`** | `%TEMP%\CampusERP-tests\` | Isolated per suite | Automatically applied | Temporary databases generated during Maven test runs and cleaned up upon exit. |
+| **`HISTORICAL`** | `data/college.db` | **Read-Only** | **Prohibited** | SHA-256 `27F160E79FE67F0054503F42CEEEA79C2D0E929A030F3B5463F00C6DDF0B8346`. Read-only milestone baseline. |
+
+

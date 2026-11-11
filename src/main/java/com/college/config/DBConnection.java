@@ -30,7 +30,9 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class DBConnection {
 
-    public static final String DEFAULT_DB_PATH = "data/college-demo.db";
+    public static final String DEFAULT_DB_PATH = DatabaseProfile.STANDARD.resolveDefaultPath().toString();
+
+    private static volatile DatabaseProfile activeProfile = DatabaseProfile.STANDARD;
 
     /**
      * Thread-safe cache of verified parent directory paths.
@@ -273,16 +275,60 @@ public class DBConnection {
     }
 
     /**
-     * Creates a new SQLite connection using the default or system-property-configured database path.
+     * Gets the currently active database profile.
      *
-     * The database path can be overridden by setting the system property {@code college.db.path}.
+     * @return active {@link DatabaseProfile}
+     */
+    public static DatabaseProfile getActiveProfile() {
+        return activeProfile;
+    }
+
+    /**
+     * Sets the active database profile.
+     *
+     * @param profile database profile to activate (must not be null)
+     */
+    public static void setActiveProfile(DatabaseProfile profile) {
+        if (profile == null) {
+            throw new IllegalArgumentException("DatabaseProfile cannot be null");
+        }
+        activeProfile = profile;
+    }
+
+    /**
+     * Resolves the active database file path.
+     * Evaluates in precedence order:
+     * <ol>
+     *   <li>System property {@code college.db.path} (if set and non-blank)</li>
+     *   <li>System property {@code college.db} (legacy compatibility override, if set and non-blank)</li>
+     *   <li>{@code activeProfile.resolveDefaultPath().toString()}</li>
+     * </ol>
+     *
+     * @return the resolved active database path string
+     */
+    public static String getActiveDatabasePath() {
+        String prop = System.getProperty("college.db.path");
+        if (prop != null && !prop.trim().isEmpty()) {
+            return prop.trim();
+        }
+        String legacyProp = System.getProperty("college.db");
+        if (legacyProp != null && !legacyProp.trim().isEmpty()) {
+            return legacyProp.trim();
+        }
+        return activeProfile.resolveDefaultPath().toString();
+    }
+
+    /**
+     * Creates a new SQLite connection using the active database path.
+     *
+     * The database path is resolved via {@link #getActiveDatabasePath()}.
      *
      * @return a new JDBC Connection with IMMEDIATE transaction mode, WAL journal, FK enforcement,
      *         and 5000ms busy timeout
      * @throws SQLException if the connection cannot be established
      */
     public static Connection getConnection() throws SQLException {
-        String dbPath = System.getProperty("college.db.path", DEFAULT_DB_PATH);
+        String dbPath = getActiveDatabasePath();
         ensureDirectoryExists(dbPath);
         String url = dbPath.startsWith("jdbc:sqlite:") ? dbPath : "jdbc:sqlite:" + dbPath;
 

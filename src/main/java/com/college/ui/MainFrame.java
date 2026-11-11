@@ -1,17 +1,21 @@
 package com.college.ui;
 
 import com.college.config.AppConfig;
+import com.college.config.DBConnection;
+import com.college.config.DatabaseProfile;
 import com.college.model.Role;
 import com.college.model.User;
 import com.college.service.AuthService;
 import com.college.ui.components.CampusIcons;
 import com.college.ui.components.CampusLogo;
 import com.college.ui.components.DangerButton;
+import com.college.ui.components.DatabaseInfoDialog;
 import com.college.ui.components.PrimaryButton;
 import com.college.ui.components.SecondaryButton;
 import com.college.ui.components.StatusBadge;
 import com.college.ui.components.StyledButton;
 import com.college.ui.components.StyledButton.ButtonStyle;
+import java.io.File;
 import com.college.ui.panel.AcademicOverviewPanel;
 import com.college.ui.panel.AcademicProgramPanel;
 import com.college.ui.panel.AdminDashboardPanel;
@@ -80,7 +84,7 @@ public class MainFrame extends JFrame {
     }
 
     public MainFrame(User currentUser, AuthService authService) {
-        super(AppConfig.APP_TITLE + " — [" + currentUser.getRole() + "] " + currentUser.getUsername());
+        super(AppConfig.APP_TITLE + " [" + DBConnection.getActiveProfile().getUiBadge() + "] — [" + currentUser.getRole() + "] " + currentUser.getUsername());
         this.currentUser = currentUser;
         this.authService = authService;
         initUI();
@@ -152,6 +156,22 @@ public class MainFrame extends JFrame {
         StatusBadge roleBadge = StatusBadge.of(currentUser.getRole().name());
         userPanel.add(roleBadge);
 
+        // Database Profile Badge
+        DatabaseProfile profile = DBConnection.getActiveProfile();
+        boolean isDemo = profile == DatabaseProfile.DEMO;
+        JButton dbBadgeBtn = new JButton(profile.getUiBadge());
+        dbBadgeBtn.setFont(CampusTheme.FONT_MICRO);
+        dbBadgeBtn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        dbBadgeBtn.setForeground(isDemo ? CampusTheme.TERRACOTTA : CampusTheme.PRIMARY);
+        dbBadgeBtn.setBackground(isDemo ? new Color(0xFD, 0xEB, 0xE7) : new Color(0xE8, 0xF5, 0xE9));
+        dbBadgeBtn.setBorder(new CompoundBorder(
+                BorderFactory.createLineBorder(isDemo ? CampusTheme.TERRACOTTA : CampusTheme.PRIMARY, 1, true),
+                BorderFactory.createEmptyBorder(4, 10, 4, 10)
+        ));
+        dbBadgeBtn.setToolTipText("Database: " + DBConnection.getActiveDatabasePath() + " (Click for details)");
+        dbBadgeBtn.addActionListener(e -> new DatabaseInfoDialog(this).setVisible(true));
+        userPanel.add(dbBadgeBtn);
+
         // Change Password Button
         JButton changePassBtn = new SecondaryButton("Password");
         changePassBtn.setIcon(CampusIcons.get(CampusIcons.IconType.PASSWORD, 14, CampusTheme.TEXT_SECONDARY));
@@ -218,7 +238,7 @@ public class MainFrame extends JFrame {
         footerLeft.setForeground(CampusTheme.TEXT_SECONDARY);
         footerBar.add(footerLeft, BorderLayout.WEST);
 
-        JLabel footerRight = new JLabel("SQLite WAL Mode • Role: " + currentUser.getRole() + " • Single Desktop Node");
+        JLabel footerRight = new JLabel(profile.getUiBadge() + " • " + new File(DBConnection.getActiveDatabasePath()).getName() + " • SQLite WAL");
         footerRight.setFont(CampusTheme.FONT_SMALL);
         footerRight.setForeground(CampusTheme.TEXT_MUTED);
         footerBar.add(footerRight, BorderLayout.EAST);
@@ -394,7 +414,7 @@ public class MainFrame extends JFrame {
             String category = getCategoryForTitle(title);
             breadcrumbLabel.setText(category + "  /  " + title);
         }
-        setTitle(AppConfig.APP_TITLE + " — " + title + " [" + currentUser.getRole() + "]");
+        setTitle(AppConfig.APP_TITLE + " [" + DBConnection.getActiveProfile().getUiBadge() + "] — " + title + " [" + currentUser.getRole() + "]");
     }
 
     private String getCategoryForTitle(String title) {

@@ -34,11 +34,27 @@ import java.util.stream.Collectors;
  */
 public class DatabaseInitializer {
 
-    private static final String SCHEMA_RESOURCE = "/schema.sql";
-    private static final String SEED_RESOURCE = "/seed.sql";
+    private static final String SCHEMA_RESOURCE = "/database/schema.sql";
+    private static final String SEED_RESOURCE = "/database/seed.sql";
 
     private DatabaseInitializer() {
         // Utility class — prevent instantiation
+    }
+
+    /**
+     * Initializes the database using an existing connection and a specific {@link DatabaseProfile}.
+     *
+     * @param conn JDBC connection with autoCommit=true
+     * @param profile database profile controlling seed data and migration permissions
+     * @throws UnsupportedOperationException if profile is HISTORICAL
+     * @throws DataAccessException if initialization fails
+     */
+    public static void initializeWithConnection(Connection conn, DatabaseProfile profile) {
+        if (profile == DatabaseProfile.HISTORICAL) {
+            throw new UnsupportedOperationException(
+                "Historical database baseline (data/college.db) is protected and cannot be initialized or migrated.");
+        }
+        initializeInternal(conn, profile.allowsSyntheticSeed());
     }
 
     /**
@@ -207,6 +223,26 @@ public class DatabaseInitializer {
     }
 
     /**
+     * Initializes the database for a specific profile by creating a new connection
+     * and executing the schema (and seed data if permitted) in a transaction.
+     *
+     * @param profile database profile controlling seed data and migration permissions
+     * @throws UnsupportedOperationException if profile is HISTORICAL
+     * @throws DataAccessException if initialization fails
+     */
+    public static void initialize(DatabaseProfile profile) {
+        if (profile == DatabaseProfile.HISTORICAL) {
+            throw new UnsupportedOperationException(
+                "Historical database baseline (data/college.db) is protected and cannot be initialized or migrated.");
+        }
+        try (Connection conn = DBConnection.getConnection()) {
+            initializeWithConnection(conn, profile);
+        } catch (SQLException e) {
+            throw new DataAccessException("Failed to initialize database for profile " + profile + ": " + e.getMessage(), e);
+        }
+    }
+
+    /**
      * Initializes the database by creating a new connection via DBConnection
      * and executing the schema and seed SQL scripts in a transaction.
      *
@@ -216,7 +252,7 @@ public class DatabaseInitializer {
      */
     public static void initialize() {
         try (Connection conn = DBConnection.getConnection()) {
-            initializeWithConnection(conn);
+            initializeWithConnection(conn, DBConnection.getActiveProfile());
         } catch (SQLException e) {
             throw new DataAccessException("Failed to initialize database: " + e.getMessage(), e);
         }
@@ -1027,10 +1063,17 @@ public class DatabaseInitializer {
      */
     private static String loadResourceAsString(String resourcePath) {
         InputStream inputStream = DatabaseInitializer.class.getResourceAsStream(resourcePath);
+        if (inputStream == null && resourcePath.startsWith("/database/")) {
+            String rootFallback = resourcePath.substring("/database".length());
+            inputStream = DatabaseInitializer.class.getResourceAsStream(rootFallback);
+        } else if (inputStream == null && !resourcePath.startsWith("/database/")) {
+            String dbFallback = "/database" + resourcePath;
+            inputStream = DatabaseInitializer.class.getResourceAsStream(dbFallback);
+        }
         if (inputStream == null) {
             throw new DataAccessException(
                 "SQL resource not found on classpath: " + resourcePath
-                + ". Ensure the resource exists in src/main/resources/.");
+                + ". Ensure the resource exists in src/main/resources/database/ or src/main/resources/.");
         }
         try (BufferedReader reader = new BufferedReader(
                 new InputStreamReader(inputStream, StandardCharsets.UTF_8))) {

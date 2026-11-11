@@ -34,8 +34,8 @@ public final class AppConfig {
     /** Application version. */
     public static final String APP_VERSION = "2.1.0";
 
-    /** Default database file path (relative to working directory). */
-    public static final String DEFAULT_DB_PATH = "data/college-demo.db";
+    /** Default database file path (resolved dynamically from STANDARD profile). */
+    public static final String DEFAULT_DB_PATH = DatabaseProfile.STANDARD.resolveDefaultPath().toString();
 
     /** Default attendance eligibility threshold percentage (75.0%). */
     public static final double DEFAULT_ATTENDANCE_THRESHOLD_PERCENT = 75.0;

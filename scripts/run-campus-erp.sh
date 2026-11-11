@@ -26,39 +26,36 @@ else
     exit 1
 fi
 
-# 3. Interactive Menu
-echo "========================================"
-echo "              CAMPUS ERP"
-echo "========================================"
-echo "1. Launch Demo Database [DEFAULT]"
-echo "2. Launch Production Database"
-echo "3. Exit"
-echo ""
-read -p "Choose an option (default: 1): " USER_CHOICE
-USER_CHOICE="${USER_CHOICE:-1}"
+# 3. Process CLI arguments or Interactive Menu
+DB_MODE="standard"
 
-if [ "${USER_CHOICE}" = "1" ]; then
-    TARGET_DB="${PROJECT_DIR}/data/college-demo.db"
-    echo "[PROFILE] Connecting to DEMONSTRATION database: ${TARGET_DB}"
-    echo "[STATUS] Live production records are completely protected and isolated."
-    echo "[SQLITE NOTE] Open ${TARGET_DB} in DB Browser and press F5 to refresh live updates."
-elif [ "${USER_CHOICE}" = "2" ]; then
-    PROD_DB="${PROJECT_DIR}/data/college.db"
-    echo "[WARNING] Live institutional database selected: ${PROD_DB}"
-    read -p "Type 'OPEN PRODUCTION DATABASE' to confirm: " CONFIRM_TEXT
-    if [ "${CONFIRM_TEXT}" != "OPEN PRODUCTION DATABASE" ]; then
-        echo "[ABORT] Confirmation mismatch. Exiting."
+if [ "$1" = "--demo" ] || [ "$1" = "--db-mode=demo" ]; then
+    DB_MODE="demo"
+elif [ "$1" = "--standard" ] || [ "$1" = "--db-mode=standard" ]; then
+    DB_MODE="standard"
+elif [ -z "$1" ]; then
+    echo "========================================"
+    echo "              CAMPUS ERP"
+    echo "========================================"
+    echo "1. Standard Institutional Database [DEFAULT]"
+    echo "2. Demo Database (Synthetic preview)"
+    echo "3. Exit"
+    echo ""
+    read -p "Choose an option (default: 1): " USER_CHOICE
+    USER_CHOICE="${USER_CHOICE:-1}"
+
+    if [ "${USER_CHOICE}" = "1" ]; then
+        DB_MODE="standard"
+    elif [ "${USER_CHOICE}" = "2" ]; then
+        DB_MODE="demo"
+    elif [ "${USER_CHOICE}" = "3" ]; then
+        echo "Exiting."
         exit 0
+    else
+        echo "[ERROR] Invalid option."
+        exit 1
     fi
-    TARGET_DB="${PROD_DB}"
-elif [ "${USER_CHOICE}" = "3" ]; then
-    echo "Exiting."
-    exit 0
-else
-    echo "[ERROR] Invalid option."
-    exit 1
 fi
 
-echo "Launching Campus ERP..."
-java "-Dcollege.db.path=${TARGET_DB}" -jar "${APP_JAR}"
-
+echo "Launching Campus ERP in ${DB_MODE} mode..."
+java -jar "${APP_JAR}" "--db-mode=${DB_MODE}" "$@"

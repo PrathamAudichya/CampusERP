@@ -1,10 +1,13 @@
 package com.college.ui;
 
 import com.college.config.AppConfig;
+import com.college.config.DBConnection;
+import com.college.config.DatabaseProfile;
 import com.college.model.User;
 import com.college.service.AuthService;
 import com.college.ui.components.CampusIcons;
 import com.college.ui.components.CampusLogo;
+import com.college.ui.components.DatabaseInfoDialog;
 import com.college.ui.components.PrimaryButton;
 import com.college.ui.components.SecondaryButton;
 import com.college.ui.theme.CampusTheme;
@@ -47,7 +50,7 @@ public class LoginFrame extends JFrame {
     }
 
     public LoginFrame(AuthService authService) {
-        super(AppConfig.APP_TITLE + " — Sign In");
+        super(AppConfig.APP_TITLE + " [" + DBConnection.getActiveProfile().getUiBadge() + "] — Sign In");
         this.authService = authService;
         initUI();
     }
@@ -145,6 +148,24 @@ public class LoginFrame extends JFrame {
         versionLabel.setForeground(CampusTheme.TEXT_MUTED);
         versionLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
         brandPanel.add(versionLabel);
+
+        // Database Profile Badge
+        DatabaseProfile activeProfile = DBConnection.getActiveProfile();
+        boolean isDemo = activeProfile == DatabaseProfile.DEMO;
+        JButton dbBadge = new JButton(activeProfile.getUiBadge());
+        dbBadge.setFont(CampusTheme.FONT_MICRO);
+        dbBadge.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        dbBadge.setForeground(isDemo ? CampusTheme.TERRACOTTA : CampusTheme.PRIMARY);
+        dbBadge.setBackground(isDemo ? new Color(0xFD, 0xEB, 0xE7) : new Color(0xE8, 0xF5, 0xE9));
+        dbBadge.setBorder(new CompoundBorder(
+                BorderFactory.createLineBorder(isDemo ? CampusTheme.TERRACOTTA : CampusTheme.PRIMARY, 1, true),
+                BorderFactory.createEmptyBorder(2, 8, 2, 8)
+        ));
+        dbBadge.setToolTipText("Database: " + DBConnection.getActiveDatabasePath() + " (Click for details)");
+        dbBadge.addActionListener(e -> new DatabaseInfoDialog(this).setVisible(true));
+        dbBadge.setAlignmentX(Component.LEFT_ALIGNMENT);
+        brandPanel.add(Box.createVerticalStrut(6));
+        brandPanel.add(dbBadge);
 
         container.add(brandPanel);
 

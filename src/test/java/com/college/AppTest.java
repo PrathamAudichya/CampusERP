@@ -1,5 +1,7 @@
 package com.college;
 
+import com.college.config.DBConnection;
+import com.college.config.DatabaseProfile;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -13,10 +15,12 @@ import static org.junit.jupiter.api.Assertions.*;
 public class AppTest {
 
     private String originalProp;
+    private DatabaseProfile originalProfile;
 
     @BeforeEach
     void setUp() {
         originalProp = System.getProperty("college.db.path");
+        originalProfile = DBConnection.getActiveProfile();
     }
 
     @AfterEach
@@ -26,27 +30,39 @@ public class AppTest {
         } else {
             System.clearProperty("college.db.path");
         }
+        DBConnection.setActiveProfile(originalProfile);
     }
 
     @Test
-    @DisplayName("CLI --demo explicitly selects data/college-demo.db")
+    @DisplayName("CLI --db-mode=standard explicitly selects STANDARD profile and path")
+    void testCliDbModeStandard() {
+        App.configureDatabaseFromArgs(new String[]{"--db-mode=standard"});
+        assertEquals(DatabaseProfile.STANDARD, DBConnection.getActiveProfile());
+        assertEquals(DatabaseProfile.STANDARD.resolveDefaultPath().toString(), System.getProperty("college.db.path"));
+    }
+
+    @Test
+    @DisplayName("CLI --db-mode=demo explicitly selects DEMO profile and path")
+    void testCliDbModeDemo() {
+        App.configureDatabaseFromArgs(new String[]{"--db-mode=demo"});
+        assertEquals(DatabaseProfile.DEMO, DBConnection.getActiveProfile());
+        assertEquals(DatabaseProfile.DEMO.resolveDefaultPath().toString(), System.getProperty("college.db.path"));
+    }
+
+    @Test
+    @DisplayName("CLI --demo explicitly selects DEMO profile")
     void testCliDemoArgument() {
         App.configureDatabaseFromArgs(new String[]{"--demo"});
-        assertEquals("data/college-demo.db", System.getProperty("college.db.path"));
+        assertEquals(DatabaseProfile.DEMO, DBConnection.getActiveProfile());
+        assertEquals(DatabaseProfile.DEMO.resolveDefaultPath().toString(), System.getProperty("college.db.path"));
     }
 
     @Test
-    @DisplayName("CLI --production explicitly selects data/college.db")
-    void testCliProductionArgument() {
-        App.configureDatabaseFromArgs(new String[]{"--production"});
-        assertEquals("data/college.db", System.getProperty("college.db.path"));
-    }
-
-    @Test
-    @DisplayName("CLI --prod shorthand explicitly selects data/college.db")
-    void testCliProdShorthandArgument() {
-        App.configureDatabaseFromArgs(new String[]{"--prod"});
-        assertEquals("data/college.db", System.getProperty("college.db.path"));
+    @DisplayName("CLI --standard explicitly selects STANDARD profile")
+    void testCliStandardArgument() {
+        App.configureDatabaseFromArgs(new String[]{"--standard"});
+        assertEquals(DatabaseProfile.STANDARD, DBConnection.getActiveProfile());
+        assertEquals(DatabaseProfile.STANDARD.resolveDefaultPath().toString(), System.getProperty("college.db.path"));
     }
 
     @Test
@@ -67,4 +83,3 @@ public class AppTest {
         assertEquals("custom-prior-path.db", System.getProperty("college.db.path"));
     }
 }
-

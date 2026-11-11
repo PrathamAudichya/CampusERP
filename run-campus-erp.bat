@@ -3,7 +3,7 @@ setlocal EnableDelayedExpansion
 chcp 65001 >nul
 
 REM ============================================================================
-REM CAMPUS ERP — Windows Desktop Application Launcher (v2.0.9)
+REM CAMPUS ERP — Windows Desktop Application Launcher (v2.1.0)
 REM University Management Platform
 REM ============================================================================
 
@@ -46,91 +46,38 @@ if exist "%PROJECT_DIR%\target\CollegeManagementSystem.jar" (
     exit /b 1
 )
 
-REM 3. Display Menu
+REM If arguments were passed directly on CLI, forward them immediately
+if not "%~1"=="" (
+    java -jar "%APP_JAR%" %*
+    exit /b %ERRORLEVEL%
+)
+
+REM 3. Interactive Mode Selection Menu
 echo.
 echo ========================================
 echo              CAMPUS ERP
 echo ========================================
 echo.
-echo 1. Launch Demo Database [DEFAULT]
-echo 2. Launch Production Database
+echo 1. Launch Standard Institutional Database [DEFAULT]
+echo 2. Launch Demonstration Database (Synthetic Preview)
 echo 3. Exit
 echo.
 
 set "USER_CHOICE=1"
 set /p "USER_CHOICE=Choose an option (default: 1): "
 
-REM Normalize whitespace
 set "USER_CHOICE=%USER_CHOICE: =%"
 
 if "%USER_CHOICE%"=="1" (
-    REM OPTION 1: Demonstration Database in project data/ directory
-    set "TARGET_DB=%PROJECT_DIR%\data\college-demo.db"
-
+    set "DB_MODE=standard"
     echo.
-    echo ============================================================================
-    echo [PROFILE] Connecting to DEMONSTRATION database:
-    echo           !TARGET_DB!
-    echo [STATUS]  Live production records are completely protected and isolated.
-    echo.
-    echo [SQLITE INSPECTION NOTE]
-    echo   To view tables and live updates in DB Browser for SQLite:
-    echo   1. File -^> Open Database -^> Select: !TARGET_DB!
-    echo   2. Contains all 28 tables, 8 triggers, and 66 indices.
-    echo   3. Press F5 or click 'Refresh' in DB Browser to view newly committed rows!
-    echo ============================================================================
-    echo.
+    echo [PROFILE] Launching STANDARD institutional database...
     goto :LAUNCH
 
 ) else if "%USER_CHOICE%"=="2" (
-    REM OPTION 2: Production Database - Strict Safety Check
-    set "PROD_DB=%PROJECT_DIR%\data\college.db"
-
+    set "DB_MODE=demo"
     echo.
-    echo ============================================================================
-    echo [WARNING] YOU HAVE SELECTED THE LIVE INSTITUTIONAL PRODUCTION DATABASE.
-    echo           Path: !PROD_DB!
-    echo.
-    echo All operations performed in this mode will permanently modify live
-    echo institutional records.
-    echo.
-    echo To confirm you intend to open the live production database, type:
-    echo   OPEN PRODUCTION DATABASE
-    echo ============================================================================
-    echo.
-
-    set "CONFIRM_TEXT="
-    set /p "CONFIRM_TEXT=Confirmation: "
-
-    if not "!CONFIRM_TEXT!"=="OPEN PRODUCTION DATABASE" (
-        echo.
-        echo [ABORT] Exact confirmation was not entered.
-        echo         Expected: OPEN PRODUCTION DATABASE
-        echo         Received: !CONFIRM_TEXT!
-        echo Live production database access cancelled safely.
-        echo.
-        pause
-        exit /b 0
-    )
-
-    if not exist "!PROD_DB!" (
-        echo.
-        echo ============================================================================
-        echo [ERROR] Production database does not exist at expected location:
-        echo         !PROD_DB!
-        echo.
-        echo [SAFETY] Missing production database will NEVER be recreated by launcher.
-        echo ============================================================================
-        echo.
-        pause
-        exit /b 1
-    )
-
-    set "TARGET_DB=!PROD_DB!"
-    echo.
-    echo [PROFILE] Connecting to PRODUCTION database:
-    echo           !TARGET_DB!
-    echo.
+    echo [PROFILE] Launching DEMONSTRATION database with synthetic preview data...
     goto :LAUNCH
 
 ) else if "%USER_CHOICE%"=="3" (
@@ -146,12 +93,11 @@ if "%USER_CHOICE%"=="1" (
 )
 
 :LAUNCH
-echo Launching Campus ERP...
+echo Launching Campus ERP (--db-mode=%DB_MODE%)...
 echo Executable: %APP_JAR%
-echo Database:   !TARGET_DB!
 echo.
 
-java "-Dcollege.db.path=!TARGET_DB!" -jar "%APP_JAR%"
+java -jar "%APP_JAR%" "--db-mode=%DB_MODE%"
 
 set "APP_EXIT=%ERRORLEVEL%"
 if %APP_EXIT% neq 0 (

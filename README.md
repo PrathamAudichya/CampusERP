@@ -5,7 +5,7 @@
 [![SQLite](https://img.shields.io/badge/Database-SQLite%203.54-lightgrey.svg)](https://www.sqlite.org/)
 [![Pure JDBC](https://img.shields.io/badge/Access-Pure%20JDBC-green.svg)](https://docs.oracle.com/javase/8/docs/technotes/guides/jdbc/)
 [![Build](https://img.shields.io/badge/Build-Maven%203.8%2B-red.svg)](https://maven.apache.org/)
-[![Tests](https://img.shields.io/badge/Tests-283%2F283%20PASS-brightgreen.svg)](https://junit.org/junit5/)
+[![Tests](https://img.shields.io/badge/Tests-341%2F341%20PASS-brightgreen.svg)](https://junit.org/junit5/)
 
 **Campus ERP** is an integrated, institutional-grade desktop academic management system engineered for higher education institutions. Built strictly with standard Java 17, Java Swing, FlatLaf, Pure JDBC, and SQLite, it delivers a secure, offline-capable college ERP solution without requiring cloud dependencies, heavyweight containers, or external web servers.
 
@@ -117,27 +117,46 @@ The executable JAR is generated at `target/CollegeManagementSystem.jar`.
 
 ---
 
-## 6. Application Startup & Execution
+## 6. Database Separation & Profiles (Milestone 0.3)
+
+Campus ERP strictly separates environments into four isolated profiles:
+
+| Profile | Storage Location | Synthetic Seeds | Migrations | Purpose |
+| :--- | :--- | :--- | :--- | :--- |
+| **`STANDARD`** (Default) | `%LOCALAPPDATA%\CampusERP\database\campuserp.db` | **Prohibited** (Clean) | V1–V11 Applied | Standard institutional production database. Admin account created via wizard/CLI. |
+| **`DEMO`** | `%LOCALAPPDATA%\CampusERP\demo\campuserp-demo.db` | **Populated** (`seed.sql`) | V1–V11 Applied | Demonstration environment with synthetic Indian academic records. |
+| **`TEST`** | `%TEMP%\CampusERP-tests\` | Isolated per suite | V1–V11 Applied | Disposable SQLite instances created exclusively during automated JUnit test runs. |
+| **`HISTORICAL`** | `data/college.db` | **Read-Only** | **Prohibited** | Protected Milestone 1 reference baseline (SHA-256 `27F160E79FE67F0054503F42CEEEA79C2D0E929A030F3B5463F00C6DDF0B8346`). |
+
+---
+
+## 7. Application Startup & Execution
 
 ### Option A: Using the Launcher Scripts (Recommended)
-- **Windows:** Run `run-campus-erp.bat`
-- **Linux / macOS:** Run `scripts/run-campus-erp.sh`
+- **Standard Platform (Windows):** Run `run-campus-erp.bat` (or `scripts\run-campus-erp.bat`)
+- **Demo Platform (Windows):** Run `scripts\run-campus-erp-demo.bat`
+- **Unix / Linux / macOS:** Run `scripts/run-campus-erp.sh`
 
-The launcher provides an interactive menu:
-1. **Launch Demo Database [Default]:** Operates against a safe, disposable demonstration database (`college-demo.db`), completely isolating the live production records.
-2. **Launch Production Database:** Requires typing `OPEN PRODUCTION DATABASE` to confirm before connecting to `data/college.db`.
-
-### Option B: Direct Java CLI Command
+### Option B: Direct Java CLI Commands
 ```bash
-# Run against demonstration database
-java -Dcollege.db.path=data/college-demo.db -jar release/CampusERP-v2.0.9-candidate.jar
+# Launch Standard Institutional Profile (Default)
+java -jar target/CollegeManagementSystem.jar --db-mode=standard
+
+# Launch Demonstration Profile (with Synthetic Seed Data)
+java -jar target/CollegeManagementSystem.jar --db-mode=demo
+
+# Initialize Clean Schema Only (Headless)
+java -jar target/CollegeManagementSystem.jar --init-schema-only
+
+# Provision Administrator Account Interactively (Headless)
+java -jar target/CollegeManagementSystem.jar --setup-admin admin
 ```
 
 ### Secure Account Provisioning:
 Campus ERP enforces a zero-default-password credential policy. All accounts are provisioned via secure workflows:
 1. **Initial Administrator:** When starting with a fresh database, `LoginFrame` automatically prompts for initial administrator account creation via `FirstRunAdminSetupDialog`, or via the headless CLI:
    ```bash
-   java -jar CampusERP.jar --setup-admin <username>
+   java -jar target/CollegeManagementSystem.jar --setup-admin <username>
    ```
 2. **Faculty & Student Accounts:** Administrators provision personnel and student accounts with cryptographically random temporary passwords via **User Management** or profile creation forms (`createStudentWithAutoAccount` / `createFacultyWithAutoAccount`).
 3. **Mandatory First-Login Password Reset:** All newly provisioned accounts require a mandatory personal password update upon first sign-in (`must_change_password=1`).

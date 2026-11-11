@@ -3,6 +3,7 @@ package com.college;
 import com.college.config.AppConfig;
 import com.college.config.DBConnection;
 import com.college.config.DatabaseInitializer;
+import com.college.config.DatabaseProfile;
 import com.college.service.AuthService;
 import com.college.ui.LoginFrame;
 import com.college.ui.theme.CampusTheme;
@@ -22,6 +23,7 @@ public class App {
      * Application entry point.
      *
      * @param args command-line arguments:
+     *             --db-mode=standard|demo : Select active database profile
      *             --setup-admin &lt;username&gt; : Secure interactive initial administrator setup
      *             --init-schema-only : Initializes database schema only without demo seed records
      */
@@ -66,20 +68,15 @@ public class App {
             return;
         }
 
-        String activeDbPath = System.getProperty("college.db.path", DBConnection.DEFAULT_DB_PATH);
-        boolean isExplicitProd = activeDbPath.replace('\\', '/').endsWith("data/college.db");
-        boolean isExplicitDemo = activeDbPath.replace('\\', '/').endsWith("data/college-demo.db");
+        DatabaseProfile activeProfile = DBConnection.getActiveProfile();
+        String activeDbPath = DBConnection.getActiveDatabasePath();
 
         System.out.println("================================================================================");
         System.out.println(AppConfig.APP_NAME + " v" + AppConfig.APP_VERSION);
-        if (isExplicitProd) {
-            System.out.println("[DATABASE MODE: PRODUCTION] Connected to live institutional database: " + activeDbPath);
-            System.out.println("[NOTICE] All changes directly alter live production records.");
-        } else if (isExplicitDemo) {
-            System.out.println("[DATABASE MODE: DEMO] Connected to isolated demonstration database: " + activeDbPath);
-            System.out.println("[SAFETY] Live production records are completely protected and isolated.");
-        } else {
-            System.out.println("[DATABASE MODE: CUSTOM/TEST] Connected to database: " + activeDbPath);
+        System.out.println("[PROFILE: " + activeProfile.getUiBadge() + "] Path: " + activeDbPath);
+        System.out.println("[DESCRIPTION] " + activeProfile.getDescription());
+        if (activeProfile == DatabaseProfile.DEMO) {
+            System.out.println("[SAFETY] Demo database is completely isolated from standard institutional records.");
         }
         System.out.println("================================================================================");
         System.out.println("Initializing database and presentation layer...");
@@ -100,8 +97,8 @@ public class App {
 
         // Initialize database schema and versioned migrations
         try {
-            DatabaseInitializer.initialize();
-            System.out.println("Database schema and migrations verified successfully.");
+            DatabaseInitializer.initialize(activeProfile);
+            System.out.println("Database schema and migrations verified successfully for " + activeProfile.name() + " profile.");
         } catch (Exception e) {
             System.err.println("CRITICAL: Database initialization / migration failed: " + e.getMessage());
             e.printStackTrace();
@@ -193,21 +190,52 @@ public class App {
     }
 
     /**
-     * Parses command-line arguments to explicitly configure the database target path.
-     * Supports --demo, --production / --prod, and --db &lt;path&gt;.
+     * Parses command-line arguments to explicitly configure the database target path and profile.
+     * Supports --db-mode=standard|demo, --demo, --standard, and --db &lt;path&gt;.
+     * Misspelled or unknown modes will terminate with an error message and exit code 1.
      *
      * @param args Command-line arguments passed to the application
      */
     public static void configureDatabaseFromArgs(String[] args) {
-        if (args != null) {
-            for (int i = 0; i < args.length; i++) {
-                if ("--demo".equalsIgnoreCase(args[i])) {
-                    System.setProperty("college.db.path", "data/college-demo.db");
-                } else if ("--production".equalsIgnoreCase(args[i]) || "--prod".equalsIgnoreCase(args[i])) {
-                    System.setProperty("college.db.path", "data/college.db");
-                } else if ("--db".equalsIgnoreCase(args[i]) && i + 1 < args.length) {
-                    System.setProperty("college.db.path", args[++i]);
+        if (args == null) {
+            return;
+        }
+
+        for (int i = 0; i < args.length; i++) {
+            String arg = args[i];
+            if (arg == null) continue;
+
+            if (arg.startsWith("--db-mode=")) {
+                String mode = arg.substring("--db-mode=".length()).trim();
+                try {
+                    DatabaseProfile profile = DatabaseProfile.fromModeString(mode);
+                    DBConnection.setActiveProfile(profile);
+                    System.setProperty("college.db.path", profile.resolveDefaultPath().toString());
+                } catch (IllegalArgumentException e) {
+                    System.err.println("Error: " + e.getMessage());
+                    System.err.println("Usage: java -jar CampusERP.jar [--db-mode=standard|demo] [--db <path>]");
+                    System.exit(1);
                 }
+            } else if ("--db-mode".equalsIgnoreCase(arg) && i + 1 < args.length) {
+                String mode = args[++i].trim();
+                try {
+                    DatabaseProfile profile = DatabaseProfile.fromModeString(mode);
+                    DBConnection.setActiveProfile(profile);
+                    System.setProperty("college.db.path", profile.resolveDefaultPath().toString());
+                } catch (IllegalArgumentException e) {
+                    System.err.println("Error: " + e.getMessage());
+                    System.err.println("Usage: java -jar CampusERP.jar [--db-mode=standard|demo] [--db <path>]");
+                    System.exit(1);
+                }
+            } else if ("--demo".equalsIgnoreCase(arg)) {
+                DBConnection.setActiveProfile(DatabaseProfile.DEMO);
+                System.setProperty("college.db.path", DatabaseProfile.DEMO.resolveDefaultPath().toString());
+            } else if ("--standard".equalsIgnoreCase(arg) || "--production".equalsIgnoreCase(arg) || "--prod".equalsIgnoreCase(arg)) {
+                DBConnection.setActiveProfile(DatabaseProfile.STANDARD);
+                System.setProperty("college.db.path", DatabaseProfile.STANDARD.resolveDefaultPath().toString());
+            } else if ("--db".equalsIgnoreCase(arg) && i + 1 < args.length) {
+                String customPath = args[++i];
+                System.setProperty("college.db.path", customPath);
             }
         }
     }
