@@ -689,6 +689,9 @@ public class UserManagementPanel extends JPanel {
                     () -> authService.updateUsername(currentUser, item.getUserId(), newUsername),
                     success -> {
                         dialog.dispose();
+                        if (currentUser != null && currentUser.getId() == item.getUserId()) {
+                            currentUser.setUsername(newUsername);
+                        }
                         SwingUtils.showInfo(this, "Username updated successfully to '" + newUsername + "'.");
                         loadUsers();
                     },
