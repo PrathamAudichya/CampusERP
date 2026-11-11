@@ -314,8 +314,8 @@ public class AuthService {
         requireRole(currentUser, Role.ADMIN);
         ValidationUtil.requireNonEmpty(newUsername, "Username");
         String trimmed = newUsername.trim();
-        if (trimmed.length() < 3 || trimmed.length() > 30) {
-            throw new ValidationException("Username must be between 3 and 30 characters.");
+        if (trimmed.length() < 3 || trimmed.length() > 50) {
+            throw new ValidationException("Username must be between 3 and 50 characters.");
         }
 
         User target = userDAO.findById(targetUserId);
